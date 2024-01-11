@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"go.dedis.ch/kyber/v3/util/random"
+	"google.golang.org/grpc"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -89,7 +90,7 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 			o.aggregator.currentSize = 0
 
 			if !isAggregator {
-				a.ValidatorEnroll(o)
+				a.ValidatorEnroll(o) // 调用链上报名函数
 				continue
 			}
 
@@ -104,76 +105,76 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 	}
 }
 
-func (a *Aggregator) ValidatorEnroll(o *OracleNode) {
-	if o.reputation < o.aggregator.minRank {
-		return
-	}
+// func (a *Aggregator) ValidatorEnroll(o *OracleNode) {
+// 	if o.reputation < o.aggregator.minRank {
+// 		return
+// 	}
 
-	// 此时，该节点参与，但是需要先向聚合器报名，此时需要发送自己的信誉值
-	node, _ := o.oracleContract.FindOracleNodeByAddress(nil, a.account)
+// 	// 此时，该节点参与，但是需要先向聚合器报名，此时需要发送自己的信誉值
+// 	node, _ := o.oracleContract.FindOracleNodeByAddress(nil, a.account)
 
-	aggregator, _ := o.oracleContract.GetAggregator(nil)
-	conn, err := o.connectionManager.FindByAddress(aggregator)
-	if err != nil {
-		log.Errorf("Find connection by address: %v", err)
-	}
-	client := NewOracleNodeClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	request := &SendEnrollRequest{
-		Enroll: &EnrollDeal{Reputation: o.reputation, Index: node.Index.Bytes()},
-	}
+// 	aggregator, _ := o.oracleContract.GetAggregator(nil)
+// 	conn, err := o.connectionManager.FindByAddress(aggregator)
+// 	if err != nil {
+// 		log.Errorf("Find connection by address: %v", err)
+// 	}
+// 	client := NewOracleNodeClient(conn)
+// 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+// 	request := &SendEnrollRequest{
+// 		Enroll: &EnrollDeal{Reputation: o.reputation, Index: node.Index.Bytes()},
+// 	}
 
-	log.Infof("Sending EnrollRequest to Aggregator %d", node.Index)
-	result, err := client.Enroll(ctx, request)
-	if err != nil {
-		log.Errorf("Send EnrollRequest: %v", err)
-	}
-	cancel()
+// 	log.Infof("Sending EnrollRequest to Aggregator %d", node.Index)
+// 	result, err := client.Enroll(ctx, request)
+// 	if err != nil {
+// 		log.Errorf("Send EnrollRequest: %v", err)
+// 	}
+// 	cancel()
 
-	if !result.EnrollSuccess {
-		log.Infof("node enroll fail %d", node.Index)
-		return
-	} else {
-		o.validator.enrolled = true
-	}
-}
+// 	if !result.EnrollSuccess {
+// 		log.Infof("node enroll fail %d", node.Index)
+// 		return
+// 	} else {
+// 		o.validator.enrolled = true
+// 	}
+// }
 
 // 报名函数
 
-func (a *Aggregator) Enroll(deal *EnrollDeal) bool {
-	index := new(big.Int).SetBytes(deal.Index).Int64()
-	isEnroll := a.isEnroll(index)
+// func (a *Aggregator) Enroll(deal *EnrollDeal) bool {
+// 	index := new(big.Int).SetBytes(deal.Index).Int64()
+// 	isEnroll := a.isEnroll(index)
 
-	// 验证器向聚合器节点进行报名
-	if !isEnroll && a.minRank <= deal.Reputation && a.currentSize < a.size {
-		a.enrollNodes = append(a.enrollNodes, index)
-		a.currentSize += deal.Reputation
+// 	// 验证器向聚合器节点进行报名
+// 	if !isEnroll && a.minRank <= deal.Reputation && a.currentSize < a.size {
+// 		a.enrollNodes = append(a.enrollNodes, index)
+// 		a.currentSize += deal.Reputation
 
-		return true
-	}
-	return false
-}
+// 		return true
+// 	}
+// 	return false
+// }
 
 // 判断是否报名
-func (a *Aggregator) isEnroll(index int64) bool {
-	for _, enrollNode := range a.enrollNodes {
-		if index == enrollNode {
-			return true
-		}
-	}
-	return false
-}
+// func (a *Aggregator) isEnroll(index int64) bool {
+// 	for _, enrollNode := range a.enrollNodes {
+// 		if index == enrollNode {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 // 获取报名节点
-func (a *Aggregator) getEnrollNodes(getNode bool) ([]int64, bool) {
-	if !getNode {
-		return nil, false
-	}
-	if a.currentSize >= a.size {
-		return a.enrollNodes, true
-	}
-	return nil, false
-}
+// func (a *Aggregator) getEnrollNodes(getNode bool) ([]int64, bool) {
+// 	if !getNode {
+// 		return nil, false
+// 	}
+// 	if a.currentSize >= a.size {
+// 		return a.enrollNodes, true
+// 	}
+// 	return nil, false
+// }
 
 func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleContractValidationRequest, typ ValidateRequest_Type) error {
 	result, MulSig, MulR, _hash, MulY, nodes, pkSet, err := a.AggregateValidationResults(ctx, event.Hash, typ) // schnorr
@@ -195,7 +196,7 @@ func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleC
 		return fmt.Errorf("new transactor: %w", err)
 	}
 
-	sig, err := ScalarToBig(MulSig)   // schnorr
+	sig, err := ScalarToBig(MulSig) // schnorr
 	// sig, err := G1PointToBig(MulSig) // bls
 	fmt.Println(sig)
 
@@ -205,12 +206,12 @@ func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleC
 	if err != nil {
 		return fmt.Errorf("public key tranform to big int: %w", err)
 	}
-	R, err := G1PointToBig(MulR)  // schnorr
+	R, err := G1PointToBig(MulR) // schnorr
 
 	if err != nil {
 		return fmt.Errorf("multi R tranform to big int: %w", err)
-	 }
-	hash, err := ScalarToBig(_hash)  //schnorr
+	}
+	hash, err := ScalarToBig(_hash) //schnorr
 	// hash, err := G1PointToBig(_hash)
 	if err != nil {
 		return fmt.Errorf("hash tranform to big int: %w", err)
@@ -238,8 +239,8 @@ func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleC
 	return nil
 }
 
-func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash common.Hash, typ ValidateRequest_Type) (bool, kyber.Scalar, kyber.Point, kyber.Scalar, kyber.Point, []common.Address, [][2]*big.Int, error) {  // schnorr
-// func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash common.Hash, typ ValidateRequest_Type) (bool, kyber.Point, kyber.Point, kyber.Point, []common.Address, [][2]*big.Int, error) { // bls
+func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash common.Hash, typ ValidateRequest_Type) (bool, kyber.Scalar, kyber.Point, kyber.Scalar, kyber.Point, []common.Address, [][2]*big.Int, error) { // schnorr
+	// func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash common.Hash, typ ValidateRequest_Type) (bool, kyber.Point, kyber.Point, kyber.Point, []common.Address, [][2]*big.Int, error) { // bls
 
 	Signatures := make([][]kyber.Scalar, 0)
 	Rs := make([][]kyber.Point, 0)
@@ -251,30 +252,29 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 	var wg sync.WaitGroup
 	var mutex sync.Mutex
 	// 获取到了报名的节点数
-	timeout := time.After(Timeout)
+	enrollNodes := make([]common.Address, 0)
 	tmpScalar := a.suite.G1().Scalar().Pick(random.New())
 	scalarSize := tmpScalar.MarshalSize()
 	PointSize := a.suite.G1().Point().Mul(tmpScalar, nil).MarshalSize()
 
-loop:
-	for {
-		select {
-		case <-timeout:
-			log.Error("Timeout")
-			break loop
-		default:
-			if a.currentSize >= a.size {
-				break loop
-			}
-			time.Sleep(1000 * time.Millisecond)
-		}
-	}
+	// loop:
+	// 	for {
+	// 		select {
+	// 		case <-timeout:
+	// 			log.Error("Timeout")
+	// 			break loop
+	// 		default:
+	// 			if a.currentSize >= a.size {
+	// 				break loop
+	// 			}
+	// 			time.Sleep(1000 * time.Millisecond)
+	// 		}
+	// 	}
 
-	for _, enrollNodeIndex := range a.enrollNodes {
-		enrollNode, _ := a.oracleContract.FindOracleNodeByIndex(nil, big.NewInt(enrollNodeIndex))
+	for _, enrollNode := range enrollNodes {
 
-		node, _ := a.oracleContract.FindOracleNodeByAddress(nil, enrollNode.Addr)
-		conn, err := a.connectionManager.FindByAddress(node.Addr)
+		node, _ := a.oracleContract.FindOracleNodeByAddress(nil, enrollNode)
+		conn, err := grpc.Dial(node.IpAddr, grpc.WithInsecure())
 		if err != nil {
 			log.Errorf("Find connection by address: %v", err)
 			continue
@@ -309,7 +309,7 @@ loop:
 				Signatures = append(Signatures, sI) //获取到所有的签名
 				Rs = append(Rs, RI)
 
-				PK = append(PK, enrollNode.PubKeys)   // schnorr
+				PK = append(PK, enrollNode.PubKeys) // schnorr
 
 				// PK = append(PK, enrollNode.BlsPubKeys) // bls
 
@@ -372,11 +372,11 @@ func (a *Aggregator) AggregateSignatureForSchnorr(txHash common.Hash, typ Valida
 		for j := 0; j < len(PK[i]); j++ {
 			// 构造Point累加形式的S
 			PKbytes := make([]byte, 0)
-			for k := 0; k < 32 - len(PK[i][j][0].Bytes()); k++{
+			for k := 0; k < 32-len(PK[i][j][0].Bytes()); k++ {
 				PKbytes = append(PKbytes, 0)
 			}
 			PKbytes = append(PKbytes, PK[i][j][0].Bytes()...)
-			for k := 0; k < 32 - len(PK[i][j][1].Bytes()); k++{
+			for k := 0; k < 32-len(PK[i][j][1].Bytes()); k++ {
 				PKbytes = append(PKbytes, 0)
 			}
 			PKbytes = append(PKbytes, PK[i][j][1].Bytes()...)
@@ -624,7 +624,7 @@ func (a *Aggregator) AggregateSignatureForBLS(txHash common.Hash, typ ValidateRe
 			}
 
 			// 累加S
-			summaryS := pointS.Clone();
+			summaryS := pointS.Clone()
 			summaryS = a.suite.G2().Point().Add(summaryS, pk)
 			summarySBytes, err := summaryS.MarshalBinary()
 			if err != nil {
