@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package iop;
+option go_package = "./iop";
+
+message SendEnrollRequest {
+  EnrollDeal Enroll = 1;
+}
+
+message EnrollDeal {
+  int64 reputation = 1;
+  bytes index = 2;
+}
+
+message SendEnrollResponse {
+  bool EnrollSuccess = 1;
+}
+
+
+message SendGetEnrollNodesRequest {
+  bool getNodes = 1;
+}
+
+message SendEnrollNodesResponse {
+  bytes EnrollNodes = 1;
+  bool EnrollSuccess = 2;
+}
+
+message ValidateRequest {
+  enum Type {
+    unknown = 0;
+    block = 1;
+    transaction = 2;
+  }
+  Type type = 1;
+  bytes hash = 2;
+  int64 size = 3;
+  int64 minRank = 4;
+}
+
+message ValidateResponse {
+  bytes hash = 1;
+  bool valid = 2;
+  int64 blockNumber = 3;
+  bytes signature = 4;
+  bytes R = 5;
+  int64 reputation = 6;
+}
+
+service OracleNode {
+  rpc Validate(ValidateRequest) returns (ValidateResponse);
+  rpc Enroll(SendEnrollRequest) returns (SendEnrollResponse);
+  rpc GetEnrollNodes(SendGetEnrollNodesRequest) returns (SendEnrollNodesResponse);
+}
