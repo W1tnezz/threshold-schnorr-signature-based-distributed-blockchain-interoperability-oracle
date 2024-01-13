@@ -60,7 +60,7 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 		},
 		sink,
 		nil,
-	)
+	) 
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 				continue
 			}
 
-			if !isAggregator && event.index%6 == 0 {
+			if !isAggregator && event.Index%6 == 0 {
 				// 报名函数
 				// node, err := a.registryContract.FindOracleNodeByAddress(nil, a.account)
 				// time.Sleep(time.Duration(node.Index.Int64()) * time.Second)
