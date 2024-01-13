@@ -1,9 +1,7 @@
 package node
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 
 	"crypto/ecdsa"
 	"crypto/sha256"
@@ -32,23 +30,20 @@ type ValidateResult struct {
 	blockNumber *big.Int
 	signature   []byte
 	R           []byte
-	reputation  int64
 }
 
 type Validator struct {
 	sync.RWMutex
-	suite             pairing.Suite
-	oracleContract    *OracleContractWrapper
-	ecdsaPrivateKey   *ecdsa.PrivateKey
-	ethClient         *ethclient.Client
-	connectionManager *ConnectionManager
-	RAll              map[common.Address]kyber.Point
-	account           common.Address
-	kafkaWriter       *kafka.Writer
-	kafkaReader       *kafka.Reader
-	privateKey        []kyber.Scalar
-	reputation        int64
-	enrolled          bool
+	suite           pairing.Suite
+	oracleContract  *OracleContractWrapper
+	ecdsaPrivateKey *ecdsa.PrivateKey
+	ethClient       *ethclient.Client
+	RAll            map[common.Address]kyber.Point
+	account         common.Address
+	kafkaWriter     *kafka.Writer
+	kafkaReader     *kafka.Reader
+	privateKey      kyber.Scalar
+	enrolled        bool
 }
 
 func NewValidator(
@@ -56,74 +51,94 @@ func NewValidator(
 	oracleContract *OracleContractWrapper,
 	ecdsaPrivateKey *ecdsa.PrivateKey,
 	ethClient *ethclient.Client,
-	connectionManager *ConnectionManager,
 	RAll map[common.Address]kyber.Point,
 	account common.Address,
 	kafkaWriter *kafka.Writer,
 	kafkaReader *kafka.Reader,
-	privateKey []kyber.Scalar,
-	reputation int64,
-
+	privateKey kyber.Scalar,
+	enrolled bool,
 ) *Validator {
 	return &Validator{
-		suite:             suite,
-		ecdsaPrivateKey:   ecdsaPrivateKey,
-		oracleContract:    oracleContract,
-		ethClient:         ethClient,
-		connectionManager: connectionManager,
-		RAll:              RAll,
-		account:           account,
-		kafkaWriter:       kafkaWriter,
-		kafkaReader:       kafkaReader,
-		privateKey:        privateKey,
-		reputation:        reputation,
-		enrolled:          false,
+		suite:           suite,
+		ecdsaPrivateKey: ecdsaPrivateKey,
+		oracleContract:  oracleContract,
+		ethClient:       ethClient,
+		RAll:            RAll,
+		account:         account,
+		kafkaWriter:     kafkaWriter,
+		kafkaReader:     kafkaReader,
+		privateKey:      privateKey,
+		enrolled:        enrolled,
 	}
-}
-
-func (v *Validator) End() {
-	v.enrolled = false
-	v.RAll = make(map[common.Address]kyber.Point)
 }
 
 func (v *Validator) Sign(message []byte) ([][]byte, error) {
-	defer v.End()
-	//此时要获取所有的报名节点，要考虑是否达到阈值，循环质询
-	node, _ := v.oracleContract.FindOracleNodeByAddress(nil, v.account)
+	// 先产生自己的R，然后在等待一段时间，随后广播, 构造R序列
+	ri := v.suite.G1().Scalar().Pick(random.New())
+	Ri := v.suite.G1().Point().Mul(ri, nil)
 
-	aggregator, _ := v.oracleContract.GetAggregator(nil)
+	RiBytes, err := Ri.MarshalBinary()
 
-	var enrollNodes []int64
-	for true {
-		conn, err := v.connectionManager.FindByAddress(aggregator)
-		if err != nil {
-			log.Errorf("Find connection by address: %v", err)
-		}
-		client := NewOracleNodeClient(conn)
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		request := &SendGetEnrollNodesRequest{
-			GetNodes: true,
-		}
-
-		log.Infof("Node %d sending getEnrollNodesRequest to Aggregator", node.Index)
-		result, err := client.GetEnrollNodes(ctx, request)
-		if err != nil {
-			log.Errorf("Send EnrollRequest: %v", err)
-		}
-		cancel()
-
-		if result.EnrollSuccess {
-			json.Unmarshal(result.EnrollNodes, &enrollNodes)
-			break
-		}
-		time.Sleep(2 * time.Second)
-
+	if err != nil {
+		log.Errorf("marshal R_i error : %v", err)
 	}
 
-	return v.SignForSchnorr(message, enrollNodes)
-	// return v.SignForBls(message, enrollNodes)
+	log.Infof("Start send kafka message R")
+	v.sendR(RiBytes)
+
+	// 此时需要获取到其他人的R,此时需要等待其他人广播完成，获取完全足够的R
+	timeout := time.After(Timeout)
+	count, err := v.oracleContract.CountEnrollNodes(nil)
+loop:
+	for {
+		select {
+		case <-timeout:
+			fmt.Errorf("Timeout")
+			break loop
+		default:
+			if count.Int64() == int64(len(v.RAll)) {
+				break loop
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+
+	R := v.suite.G1().Point().Null()
+	for key := range v.RAll {
+		R = v.suite.G1().Point().Add(R, v.RAll[key])
+	}
+
+	lam, Y := v.suite.G1().Scalar().Pick(v.suite.RandomStream()), v.suite.G1().Point().Pick(v.suite.RandomStream())
+	m := message
+	RByte, err := R.MarshalBinary()
+	if err != nil {
+		log.Errorf("marshal R error : %w", err)
+	}
+	YBytes, err := Y.MarshalBinary()
+	if err != nil {
+		log.Errorf("marshal Y error : %w", err)
+	}
+
+	m = append(m, RByte...)
+	m = append(m, YBytes...)
+
+	hash := sha256.New()
+	hash.Write(m)
+	c := v.suite.G1().Scalar().SetBytes(hash.Sum(nil))
+
+	signature := make([][]byte, 2)
+	z := v.suite.G1().Scalar().Add(ri, v.suite.G1().Scalar().Mul(lam, v.suite.G1().Scalar().Mul(c, v.privateKey)))
+
+	signature[0], err = z.MarshalBinary()
+	if err != nil {
+		log.Errorf("marshal z error : %w", err)
+	}
+	signature[1] = RByte
+
+	return signature, nil
 
 }
+
 // func (v *Validator) SignForBls(message []byte, enrollNodes []int64) ([][]byte, error) {
 // 	hash := sha256.New()
 // 	hash.Write(message)
@@ -170,83 +185,6 @@ func (v *Validator) Sign(message []byte) ([][]byte, error) {
 // 	return signature, nil
 
 // }
-
-func (v *Validator) SignForSchnorr(message []byte, enrollNodes []int64) ([][]byte, error) {
-	// 先产生自己的R，然后在等待一段时间，随后广播, 构造R序列
-	RI := make([]kyber.Point, 0)
-	rI := make([]kyber.Scalar, 0)
-	for i := int64(0); i < v.reputation; i++ {
-		r := v.suite.G1().Scalar().Pick(random.New())
-		rI = append(rI, r)
-		RI = append(RI, v.suite.G1().Point().Mul(r, nil))
-	}
-
-	RPI := v.suite.G1().Point().Null()
-
-	for _, R := range RI {
-		RPI.Add(RPI, R)
-	}
-
-	RPIbytes, err := RPI.MarshalBinary()
-
-	if err != nil {
-		log.Errorf("marshal R_Pi error : %v", err)
-	}
-
-	log.Infof("Start send kafka message R")
-	v.sendR(RPIbytes)
-
-	// 此时需要获取到其他人的R,此时需要等待其他人广播完成，获取完全足够的R
-	timeout := time.After(Timeout)
-loop:
-	for {
-		select {
-		case <-timeout:
-			log.Errorf("Timeout")
-			break loop
-		default:
-			if len(enrollNodes) == len(v.RAll) {
-				break loop
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
-	}
-
-	R := v.suite.G1().Point().Null()
-	fmt.Println(v.RAll)
-	for key := range v.RAll {
-		R.Add(R, v.RAll[key])
-	}
-	m := make([][]byte, 2)
-	m[0] = message
-	m[1], err = R.MarshalBinary()
-	hash := sha256.New()
-	e := hash.Sum(bytes.Join(m, []byte("")))
-
-	s := make([]kyber.Scalar, 0)
-	for i := int64(0); i < v.reputation; i++ {
-		sI := v.suite.G1().Scalar().Add(rI[i], v.suite.G1().Scalar().Mul(v.suite.G1().Scalar().SetBytes(e), v.privateKey[i]))
-		s = append(s, sI)
-	}
-
-	signature := make([][]byte, 2)
-	for _, si := range s {
-		siBytes, _ := si.MarshalBinary()
-		for _, b := range siBytes {
-			signature[0] = append(signature[0], b)
-		}
-
-	}
-
-	for _, Ri := range RI {
-		RiBytes, _ := Ri.MarshalBinary()
-		for _, b := range RiBytes {
-			signature[1] = append(signature[1], b)
-		}
-
-	}
-	return signature, nil
-}
 
 func (v *Validator) ListenAndProcess(o *OracleNode) error {
 
@@ -334,10 +272,9 @@ func (v *Validator) ValidateTransaction(ctx context.Context, hash common.Hash, s
 	return &ValidateResult{
 		hash,
 		valid,
-		big.NewInt(0),
+		big.NewInt(int64(blockNumber)),
 		sig[0],
 		sig[1],
-		v.reputation,
 	}, nil
 }
 
@@ -382,6 +319,5 @@ func (v *Validator) ValidateBlock(ctx context.Context, hash common.Hash) (*Valid
 		blockNumber,
 		sig[0],
 		sig[1],
-		v.reputation,
 	}, nil
 }

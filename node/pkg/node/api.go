@@ -2,32 +2,30 @@ package node
 
 import (
 	"context"
-	"encoding/json"
+
 	"github.com/ethereum/go-ethereum/common"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (n *OracleNode) Enroll(_ context.Context, request *SendEnrollRequest) (*SendEnrollResponse, error) {
-	//	此时接收到报名请求
-	success := n.aggregator.Enroll(request.Enroll)
-	return &SendEnrollResponse{EnrollSuccess: success}, nil
-}
+// func (n *OracleNode) Enroll(_ context.Context, request *SendEnrollRequest) (*SendEnrollResponse, error) {
+// 	//	此时接收到报名请求
+// 	success := n.aggregator.Enroll(request.Enroll)
+// 	return &SendEnrollResponse{EnrollSuccess: success}, nil
+// }
 
-
-
-func (n *OracleNode) GetEnrollNodes(_ context.Context, request *SendGetEnrollNodesRequest) (*SendEnrollNodesResponse, error) {
-	enrollNodes, success := n.aggregator.getEnrollNodes(request.GetNodes)
-	if success {
-		enrollNodesBytes, err := json.Marshal(enrollNodes)
-		if err != nil {
-			return nil, err
-		}
-		return &SendEnrollNodesResponse{EnrollNodes: enrollNodesBytes, EnrollSuccess: success}, nil
-	}
-	return &SendEnrollNodesResponse{EnrollNodes: nil, EnrollSuccess: success}, nil
-}
+// func (n *OracleNode) GetEnrollNodes(_ context.Context, request *SendGetEnrollNodesRequest) (*SendEnrollNodesResponse, error) {
+// 	enrollNodes, success := n.aggregator.getEnrollNodes(request.GetNodes)
+// 	if success {
+// 		enrollNodesBytes, err := json.Marshal(enrollNodes)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		return &SendEnrollNodesResponse{EnrollNodes: enrollNodesBytes, EnrollSuccess: success}, nil
+// 	}
+// 	return &SendEnrollNodesResponse{EnrollNodes: nil, EnrollSuccess: success}, nil
+// }
 
 // 这个函数的功能是验证器来验证的过程，以及构造出应答
 func (n *OracleNode) Validate(ctx context.Context, request *ValidateRequest) (*ValidateResponse, error) {
@@ -69,7 +67,6 @@ func ValidateResultToResponse(result *ValidateResult) *ValidateResponse {
 		Valid:      result.valid,
 		Signature:  result.signature,
 		R:          result.R,
-		Reputation: result.reputation,
 	}
 
 	if result.blockNumber != nil {

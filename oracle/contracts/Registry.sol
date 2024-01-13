@@ -48,6 +48,10 @@ contract Registry {
         NodeArr.pop();
     }
 
+    function minStake() public pure returns (uint256){
+        return MIN_STAKE;
+    }
+
     function getNodeByAddress(address addr) public view returns (Node memory) {
         return NodeMap[addr];
     }

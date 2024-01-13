@@ -6,14 +6,16 @@ import (
 )
 
 type OracleContractWrapper struct {
+	*Registry
+	*DKG
 	*OracleContract
 }
-func (r *OracleContractWrapper) FindOracleNodes() ([]OracleContractOracleNode, error) {
+func (r *OracleContractWrapper) FindOracleNodes() ([]RegistryNode, error) {
 	count, err := r.CountOracleNodes(nil)
 	if err != nil {
 		return nil, fmt.Errorf("count oracle nodes: %w", err)
 	}
-	nodeEntries := make([]OracleContractOracleNode, count.Int64())
+	nodeEntries := make([]RegistryNode, count.Int64())
 	for i := int64(0); i < count.Int64(); i++ {
 		node, err := r.FindOracleNodeByIndex(nil, big.NewInt(i))
 		if err != nil {
