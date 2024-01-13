@@ -38,7 +38,7 @@ contract DKG{
         }
 
         validators.push(msg.sender);
-        if(validators.length >= registry.countOracleNodes() / 2){
+        if(validators.length >= (registry.countOracleNodes() - 1) / 2 + 1){
             distKey();
             remain = 8;
         }
