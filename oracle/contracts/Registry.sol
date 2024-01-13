@@ -15,6 +15,8 @@ contract Registry {
 
     address[] private NodeArr;
 
+    address private aggregator;
+
     uint256 private constant MIN_STAKE = 1 ether;
 
     event RegisterOracleNode(address indexed sender);
@@ -32,6 +34,9 @@ contract Registry {
         node.ipAddr = ipAddr;
         node.pubKey = pubKey;
         node.stake = msg.value;
+        if(NodeArr.length == 0){
+            aggregator = msg.sender;
+        }
         NodeArr.push(msg.sender);
         node.index = NodeArr.length;
         emit RegisterOracleNode(msg.sender);
@@ -77,6 +82,14 @@ contract Registry {
     ) public view returns (Node memory) {
         require(_index >= 0 && _index < NodeArr.length, "not found");
         return NodeMap[NodeArr[_index]];
+    }
+
+    function isAggregator(address addr) public view returns (bool){
+        return aggregator == addr;
+    }
+
+    function getAggregator() public view returns (address){
+        return aggregator;
     }
 
 }
