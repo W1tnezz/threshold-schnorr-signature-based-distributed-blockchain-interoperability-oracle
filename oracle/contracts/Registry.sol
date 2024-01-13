@@ -2,77 +2,77 @@
 pragma solidity ^0.8.19;
 
 contract Registry {
-    struct Signer {
+    struct Node {
         address addr; // eth address
         string ipAddr; // IP
-        string identity; // identity；
         uint256[2] pubKey; // H(identity), H: string -> G1 point
+        uint256 index;
+        uint256 lambda;
+        uint256 stake;
     }
 
-    mapping(address => Signer) private SignerMap;
+    mapping(address => Node) private NodeMap;
 
-    address[] private SignerArr;
+    address[] private NodeArr;
 
-    address[] private SignOrder;
+    uint256 private constant MIN_STAKE = 1 ether;
 
-    bytes32 private message;
-
-
-    enum SignType {
-        SAKAI,
-        IBSAS,
-        NOTBATCH
-    }
-
-    event Sign(SignType typ, bytes32 message, address[] signOrder);
+    event RegisterOracleNode(address indexed sender);
 
     // --------------------------------------------------------------------------------------------------------------------------------------------------------
 
     function register(
         string calldata ipAddr,
-        string calldata identity,
         uint256[2] calldata pubKey
     ) external payable {
-        require(SignerMap[msg.sender].addr != msg.sender, "already");
-        require(bytes(identity).length != 0, "empty identity");
-        Signer storage signer = SignerMap[msg.sender];
-        signer.addr = msg.sender;
-        signer.ipAddr = ipAddr;
-        signer.identity = identity;
-        signer.pubKey = pubKey;
-        SignerArr.push(msg.sender);
+        require(NodeMap[msg.sender].addr != msg.sender, "ALREADY");
+        require(msg.value >= MIN_STAKE, "STAKE TOO LOW");
+        Node storage node = NodeMap[msg.sender];
+        node.addr = msg.sender;
+        node.ipAddr = ipAddr;
+        node.pubKey = pubKey;
+        node.stake = msg.value;
+        NodeArr.push(msg.sender);
+        node.index = NodeArr.length;
+        emit RegisterOracleNode(msg.sender);
     }
 
-    function getSignerByAddress(
-        address addr
-    ) public view returns (Signer memory) {
-        return SignerMap[addr];
-    }
-
-    function getSignerPubkeyByAddress(
-        address addr
-    ) public view returns (uint256[2] memory) {
-        return SignerMap[addr].pubKey;
-    }
-
-    function requestSign(
-        SignType typ,
-        bytes32 _message,
-        uint[] calldata signOrder
-    ) external payable {
-        delete SignOrder;
-        for (uint i = 0; i < signOrder.length; i++) {
-            SignOrder.push(SignerArr[i]);
+    function unregister() external payable {
+        require(NodeMap[msg.sender].addr == msg.sender, "HAVEN'T REGISTER");
+        payable(msg.sender).transfer(NodeMap[msg.sender].stake);
+        uint index = NodeMap[msg.sender].index;
+        for (; index < NodeArr.length; index++) {
+            NodeMap[msg.sender].index = NodeMap[msg.sender].index - 1;
+            NodeArr[index - 1] = NodeArr[index];
         }
-        message = _message;
-        emit Sign(typ, message, SignOrder);
+        NodeArr.pop();
     }
 
-    function getMessage() public view returns (bytes32) {
-        return message;
+    function getNodeByAddress(address addr) public view returns (Node memory) {
+        return NodeMap[addr];
     }
 
-    function getSignOrder() public view returns (address[] memory) {
-        return SignOrder;
+    function getIndex(address addr) public view returns (uint256) {
+        return NodeMap[addr].index;
     }
+
+    function getLambda(address addr) public view returns (uint256) {
+        return NodeMap[addr].lambda;
+    }
+
+    function setLambda(address addr, uint256 lambda) public {
+        NodeMap[addr].lambda = lambda;
+    }
+
+    function countOracleNodes() public view returns (uint256) {
+        return NodeArr.length;
+    }
+
+    function findOracleNodeByIndex(
+        uint256 _index
+    ) public view returns (Node memory) {
+        require(_index >= 0 && _index < NodeArr.length, "not found");
+        return NodeMap[NodeArr[_index]];
+    }
+
 }

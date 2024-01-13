@@ -300,6 +300,15 @@ library BN256G1 {
         return EllipticCurve.deriveY(_yByte, _x, AA, BB, PP);
     }
 
+    function mod(int256 a) public pure returns (uint256) {
+        if (a < 0) {
+            uint256 res = uint256(-a);
+            return NN - res;
+        } else{
+            return uint256(a) % NN;
+        }
+    }
+
     function modInverse(uint256 a) public pure returns (uint256) {
         uint256 m = NN;
         int256 m0;
