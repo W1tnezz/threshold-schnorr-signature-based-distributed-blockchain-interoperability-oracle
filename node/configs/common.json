@@ -1,6 +1,8 @@
 {
     "contracts": {
-      "oracleContractAddress": "0x27728eC32C8e43fd07160FDc981731F98EF1a84F"
+      "registryContractAddress": "0xB4fA0c161CA7311c9f5F8145559465E4810F3ba2",
+      "distKeyContractAddress": "0x27728eC32C8e43fd07160FDc981731F98EF1a84F",
+      "oracleContractAddress": "0x923C26Be69A53A0470cf40fA2a59C21C86991d5D"
     },
     "ethereum": {
       "sourceAddress": "ws://127.0.0.1:8545",

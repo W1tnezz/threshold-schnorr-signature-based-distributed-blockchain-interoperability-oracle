@@ -1,14 +1,14 @@
 const fs = require("fs");
-const Registry = artifacts.require("Registry");
+const Oracle = artifacts.require("Oracle");
 
 module.exports = async function () {
 
-  let registry = await Registry.deployed();
-  let type = 0;  // 0 : sakai, 1 : IBSAS, 2 : NOTBATCH
-  let message = "0x930d2dedab40cb4c03a967aea4f54b22ba6328f7096dc44590e651de6e2a416b";
-  let signOrder = [0, 1]
-  let index = 0
+  let oracle = await Oracle.deployed();
+  let fee = await oracle.totalFee();
 
-  await registry.requestSign(type, message, signOrder,index);
+  let message = "0x5071f5eb1f1eeea184b2a472950cfc087a211e83cf473d5fff208df28b0db0d5";
+  await oracle.validateTransaction(message, {
+    value: fee,
+  });
 
 };
