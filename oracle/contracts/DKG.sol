@@ -26,15 +26,17 @@ contract DKG{
         return remain == 0;
     }
 
-    function enroll() external {
-        require(remain == 0, "FORBIDE ENROLL");
+    function enroll() external returns (bool){
+        if(remain != 0){
+            return false;
+        }
         for(uint i = 0; i < validators.length; i++){
             require(validators[i] != msg.sender, "ENROLLED");
         }
 
         if(validators.length == 0){
             aggregator = msg.sender;
-            return;
+            return true;
         }
 
         validators.push(msg.sender);
@@ -42,6 +44,7 @@ contract DKG{
             distKey();
             remain = 8;
         }
+        return true;
     }
 
     function distKey() private {
