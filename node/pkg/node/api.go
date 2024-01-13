@@ -67,7 +67,6 @@ func ValidateResultToResponse(result *ValidateResult) *ValidateResponse {
 		Valid:      result.valid,
 		Signature:  result.signature,
 		R:          result.R,
-		Reputation: result.reputation,
 	}
 
 	if result.blockNumber != nil {

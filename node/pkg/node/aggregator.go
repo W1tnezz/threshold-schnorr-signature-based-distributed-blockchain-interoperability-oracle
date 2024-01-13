@@ -22,39 +22,31 @@ import (
 )
 
 type Aggregator struct {
-	suite             pairing.Suite
-	ethClient         *ethclient.Client
-	connectionManager *ConnectionManager
-	oracleContract    *OracleContractWrapper
-	account           common.Address
-	ecdsaPrivateKey   *ecdsa.PrivateKey
-	chainId           *big.Int
-	size              int64 // 总的
-	enrollNodes       []int64
-	minRank           int64 // 每次节点的最小
-	currentSize       int64
-	reputation        bool
+	suite     pairing.Suite
+	ethClient *ethclient.Client
+
+	oracleContract  *OracleContractWrapper
+	account         common.Address
+	ecdsaPrivateKey *ecdsa.PrivateKey
+	chainId         *big.Int
 }
 
 func NewAggregator(
 	suite pairing.Suite,
 	ethClient *ethclient.Client,
-	connectionManager *ConnectionManager,
 	oracleContract *OracleContractWrapper,
 	account common.Address,
 	ecdsaPrivateKey *ecdsa.PrivateKey,
 	chainId *big.Int,
-	enrollNodes []int64,
+
 ) *Aggregator {
 	return &Aggregator{
-		suite:             suite,
-		ethClient:         ethClient,
-		connectionManager: connectionManager,
-		oracleContract:    oracleContract,
-		account:           account,
-		ecdsaPrivateKey:   ecdsaPrivateKey,
-		chainId:           chainId,
-		enrollNodes:       enrollNodes,
+		suite:           suite,
+		ethClient:       ethClient,
+		oracleContract:  oracleContract,
+		account:         account,
+		ecdsaPrivateKey: ecdsaPrivateKey,
+		chainId:         chainId,
 	}
 }
 
@@ -85,12 +77,19 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 				log.Errorf("Is aggregator: %v", err)
 				continue
 			}
-			o.aggregator.size = event.Size.Int64()
-			o.aggregator.minRank = event.MinRank.Int64()
-			o.aggregator.currentSize = 0
 
-			if !isAggregator {
-				a.ValidatorEnroll(o) // 调用链上报名函数
+			if !isAggregator && event.index%6 == 0 {
+				// 报名函数
+				// node, err := a.registryContract.FindOracleNodeByAddress(nil, a.account)
+				// time.Sleep(time.Duration(node.Index.Int64()) * time.Second)
+
+				err = a.Enroll()
+				if err != nil {
+					log.Errorf("Node Enroll log: %v", err)
+				} else {
+					o.validator.enrolled = true
+					log.Infof("Enroll success")
+				}
 				continue
 			}
 
@@ -105,76 +104,21 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 	}
 }
 
-// func (a *Aggregator) ValidatorEnroll(o *OracleNode) {
-// 	if o.reputation < o.aggregator.minRank {
-// 		return
-// 	}
-
-// 	// 此时，该节点参与，但是需要先向聚合器报名，此时需要发送自己的信誉值
-// 	node, _ := o.oracleContract.FindOracleNodeByAddress(nil, a.account)
-
-// 	aggregator, _ := o.oracleContract.GetAggregator(nil)
-// 	conn, err := o.connectionManager.FindByAddress(aggregator)
-// 	if err != nil {
-// 		log.Errorf("Find connection by address: %v", err)
-// 	}
-// 	client := NewOracleNodeClient(conn)
-// 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-// 	request := &SendEnrollRequest{
-// 		Enroll: &EnrollDeal{Reputation: o.reputation, Index: node.Index.Bytes()},
-// 	}
-
-// 	log.Infof("Sending EnrollRequest to Aggregator %d", node.Index)
-// 	result, err := client.Enroll(ctx, request)
-// 	if err != nil {
-// 		log.Errorf("Send EnrollRequest: %v", err)
-// 	}
-// 	cancel()
-
-// 	if !result.EnrollSuccess {
-// 		log.Infof("node enroll fail %d", node.Index)
-// 		return
-// 	} else {
-// 		o.validator.enrolled = true
-// 	}
-// }
-
 // 报名函数
-
-// func (a *Aggregator) Enroll(deal *EnrollDeal) bool {
-// 	index := new(big.Int).SetBytes(deal.Index).Int64()
-// 	isEnroll := a.isEnroll(index)
-
-// 	// 验证器向聚合器节点进行报名
-// 	if !isEnroll && a.minRank <= deal.Reputation && a.currentSize < a.size {
-// 		a.enrollNodes = append(a.enrollNodes, index)
-// 		a.currentSize += deal.Reputation
-
-// 		return true
-// 	}
-// 	return false
-// }
-
-// 判断是否报名
-// func (a *Aggregator) isEnroll(index int64) bool {
-// 	for _, enrollNode := range a.enrollNodes {
-// 		if index == enrollNode {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
-// 获取报名节点
-// func (a *Aggregator) getEnrollNodes(getNode bool) ([]int64, bool) {
-// 	if !getNode {
-// 		return nil, false
-// 	}
-// 	if a.currentSize >= a.size {
-// 		return a.enrollNodes, true
-// 	}
-// 	return nil, false
-// }
+func (a *Aggregator) Enroll() error {
+	isEnroll, err := a.oracleContract.OracleNodeIsEnroll(nil, a.account)
+	if err != nil {
+		return fmt.Errorf("is enrolled: %w", err)
+	}
+	if !isEnroll {
+		auth, err := bind.NewKeyedTransactorWithChainID(a.ecdsaPrivateKey, a.chainId)
+		_, err = a.oracleContract.EnrollOracleNode(auth)
+		if err != nil {
+			return fmt.Errorf("enroll iop node: %w", err)
+		}
+	}
+	return nil
+}
 
 func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleContractValidationRequest, typ ValidateRequest_Type) error {
 	result, MulSig, MulR, _hash, MulY, nodes, pkSet, err := a.AggregateValidationResults(ctx, event.Hash, typ) // schnorr
@@ -240,7 +184,6 @@ func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleC
 }
 
 func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash common.Hash, typ ValidateRequest_Type) (bool, kyber.Scalar, kyber.Point, kyber.Scalar, kyber.Point, []common.Address, [][2]*big.Int, error) { // schnorr
-	// func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash common.Hash, typ ValidateRequest_Type) (bool, kyber.Point, kyber.Point, kyber.Point, []common.Address, [][2]*big.Int, error) { // bls
 
 	Signatures := make([][]kyber.Scalar, 0)
 	Rs := make([][]kyber.Point, 0)
@@ -256,20 +199,6 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 	tmpScalar := a.suite.G1().Scalar().Pick(random.New())
 	scalarSize := tmpScalar.MarshalSize()
 	PointSize := a.suite.G1().Point().Mul(tmpScalar, nil).MarshalSize()
-
-	// loop:
-	// 	for {
-	// 		select {
-	// 		case <-timeout:
-	// 			log.Error("Timeout")
-	// 			break loop
-	// 		default:
-	// 			if a.currentSize >= a.size {
-	// 				break loop
-	// 			}
-	// 			time.Sleep(1000 * time.Millisecond)
-	// 		}
-	// 	}
 
 	for _, enrollNode := range enrollNodes {
 
@@ -288,10 +217,8 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 			ctxTimeout, cancel := context.WithTimeout(ctx, 60*time.Second)
 
 			result, err := client.Validate(ctxTimeout, &ValidateRequest{
-				Type:    typ,
-				Hash:    txHash[:],
-				Size:    a.size,
-				MinRank: a.minRank,
+				Type: typ,
+				Hash: txHash[:],
 			})
 
 			cancel()
@@ -302,17 +229,12 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 
 			mutex.Lock()
 			if result.Valid {
-				totalRank += result.Reputation
+
 				sI, RI := a.HandleResultForSchnorr(result, scalarSize, PointSize)
 				// sI := a.HandleResultForBls(result, PointSize)
-				nodes = append(nodes, enrollNode.Addr)
+
 				Signatures = append(Signatures, sI) //获取到所有的签名
 				Rs = append(Rs, RI)
-
-				PK = append(PK, enrollNode.PubKeys) // schnorr
-
-				// PK = append(PK, enrollNode.BlsPubKeys) // bls
-
 			}
 		}()
 	}
