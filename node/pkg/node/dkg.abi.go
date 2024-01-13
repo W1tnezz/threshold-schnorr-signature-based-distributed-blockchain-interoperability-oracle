@@ -31,7 +31,7 @@ var (
 
 // DKGMetaData contains all meta data concerning the DKG contract.
 var DKGMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_registryContract\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256[2]\",\"name\":\"pubKey\",\"type\":\"uint256[2]\"}],\"name\":\"DistKey\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"enroll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAggregator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPubKey\",\"outputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"\",\"type\":\"uint256[2]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isAggregator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"needEnroll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"usePubKey\",\"outputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"\",\"type\":\"uint256[2]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_registryContract\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256[2]\",\"name\":\"pubKey\",\"type\":\"uint256[2]\"}],\"name\":\"DistKey\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"enroll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPubKey\",\"outputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"\",\"type\":\"uint256[2]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"needEnroll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"usePubKey\",\"outputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"\",\"type\":\"uint256[2]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // DKGABI is the input ABI used to generate the binding from.
@@ -180,37 +180,6 @@ func (_DKG *DKGTransactorRaw) Transact(opts *bind.TransactOpts, method string, p
 	return _DKG.Contract.contract.Transact(opts, method, params...)
 }
 
-// GetAggregator is a free data retrieval call binding the contract method 0x3ad59dbc.
-//
-// Solidity: function getAggregator() view returns(address)
-func (_DKG *DKGCaller) GetAggregator(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _DKG.contract.Call(opts, &out, "getAggregator")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// GetAggregator is a free data retrieval call binding the contract method 0x3ad59dbc.
-//
-// Solidity: function getAggregator() view returns(address)
-func (_DKG *DKGSession) GetAggregator() (common.Address, error) {
-	return _DKG.Contract.GetAggregator(&_DKG.CallOpts)
-}
-
-// GetAggregator is a free data retrieval call binding the contract method 0x3ad59dbc.
-//
-// Solidity: function getAggregator() view returns(address)
-func (_DKG *DKGCallerSession) GetAggregator() (common.Address, error) {
-	return _DKG.Contract.GetAggregator(&_DKG.CallOpts)
-}
-
 // GetPubKey is a free data retrieval call binding the contract method 0x4ad02ef1.
 //
 // Solidity: function getPubKey() view returns(uint256[2])
@@ -271,37 +240,6 @@ func (_DKG *DKGSession) GetValidators() ([]common.Address, error) {
 // Solidity: function getValidators() view returns(address[])
 func (_DKG *DKGCallerSession) GetValidators() ([]common.Address, error) {
 	return _DKG.Contract.GetValidators(&_DKG.CallOpts)
-}
-
-// IsAggregator is a free data retrieval call binding the contract method 0x1e8f3c95.
-//
-// Solidity: function isAggregator(address addr) view returns(bool)
-func (_DKG *DKGCaller) IsAggregator(opts *bind.CallOpts, addr common.Address) (bool, error) {
-	var out []interface{}
-	err := _DKG.contract.Call(opts, &out, "isAggregator", addr)
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsAggregator is a free data retrieval call binding the contract method 0x1e8f3c95.
-//
-// Solidity: function isAggregator(address addr) view returns(bool)
-func (_DKG *DKGSession) IsAggregator(addr common.Address) (bool, error) {
-	return _DKG.Contract.IsAggregator(&_DKG.CallOpts, addr)
-}
-
-// IsAggregator is a free data retrieval call binding the contract method 0x1e8f3c95.
-//
-// Solidity: function isAggregator(address addr) view returns(bool)
-func (_DKG *DKGCallerSession) IsAggregator(addr common.Address) (bool, error) {
-	return _DKG.Contract.IsAggregator(&_DKG.CallOpts, addr)
 }
 
 // NeedEnroll is a free data retrieval call binding the contract method 0x013f7be5.
@@ -446,39 +384,28 @@ func (it *DKGDistKeyIterator) Close() error {
 
 // DKGDistKey represents a DistKey event raised by the DKG contract.
 type DKGDistKey struct {
-	Aggregator common.Address
-	PubKey     [2]*big.Int
-	Raw        types.Log // Blockchain specific contextual infos
+	PubKey [2]*big.Int
+	Raw    types.Log // Blockchain specific contextual infos
 }
 
-// FilterDistKey is a free log retrieval operation binding the contract event 0xe79f6e2cc68fa734a69b02666679c26b1b7631dc758f633bc0908d3db05cc75e.
+// FilterDistKey is a free log retrieval operation binding the contract event 0x3039495696db8c6135ec1af78a3dd269dc6a9df4b25b07a806701140e8dec0d5.
 //
-// Solidity: event DistKey(address indexed aggregator, uint256[2] pubKey)
-func (_DKG *DKGFilterer) FilterDistKey(opts *bind.FilterOpts, aggregator []common.Address) (*DKGDistKeyIterator, error) {
+// Solidity: event DistKey(uint256[2] pubKey)
+func (_DKG *DKGFilterer) FilterDistKey(opts *bind.FilterOpts) (*DKGDistKeyIterator, error) {
 
-	var aggregatorRule []interface{}
-	for _, aggregatorItem := range aggregator {
-		aggregatorRule = append(aggregatorRule, aggregatorItem)
-	}
-
-	logs, sub, err := _DKG.contract.FilterLogs(opts, "DistKey", aggregatorRule)
+	logs, sub, err := _DKG.contract.FilterLogs(opts, "DistKey")
 	if err != nil {
 		return nil, err
 	}
 	return &DKGDistKeyIterator{contract: _DKG.contract, event: "DistKey", logs: logs, sub: sub}, nil
 }
 
-// WatchDistKey is a free log subscription operation binding the contract event 0xe79f6e2cc68fa734a69b02666679c26b1b7631dc758f633bc0908d3db05cc75e.
+// WatchDistKey is a free log subscription operation binding the contract event 0x3039495696db8c6135ec1af78a3dd269dc6a9df4b25b07a806701140e8dec0d5.
 //
-// Solidity: event DistKey(address indexed aggregator, uint256[2] pubKey)
-func (_DKG *DKGFilterer) WatchDistKey(opts *bind.WatchOpts, sink chan<- *DKGDistKey, aggregator []common.Address) (event.Subscription, error) {
+// Solidity: event DistKey(uint256[2] pubKey)
+func (_DKG *DKGFilterer) WatchDistKey(opts *bind.WatchOpts, sink chan<- *DKGDistKey) (event.Subscription, error) {
 
-	var aggregatorRule []interface{}
-	for _, aggregatorItem := range aggregator {
-		aggregatorRule = append(aggregatorRule, aggregatorItem)
-	}
-
-	logs, sub, err := _DKG.contract.WatchLogs(opts, "DistKey", aggregatorRule)
+	logs, sub, err := _DKG.contract.WatchLogs(opts, "DistKey")
 	if err != nil {
 		return nil, err
 	}
@@ -510,9 +437,9 @@ func (_DKG *DKGFilterer) WatchDistKey(opts *bind.WatchOpts, sink chan<- *DKGDist
 	}), nil
 }
 
-// ParseDistKey is a log parse operation binding the contract event 0xe79f6e2cc68fa734a69b02666679c26b1b7631dc758f633bc0908d3db05cc75e.
+// ParseDistKey is a log parse operation binding the contract event 0x3039495696db8c6135ec1af78a3dd269dc6a9df4b25b07a806701140e8dec0d5.
 //
-// Solidity: event DistKey(address indexed aggregator, uint256[2] pubKey)
+// Solidity: event DistKey(uint256[2] pubKey)
 func (_DKG *DKGFilterer) ParseDistKey(log types.Log) (*DKGDistKey, error) {
 	event := new(DKGDistKey)
 	if err := _DKG.contract.UnpackLog(event, "DistKey", log); err != nil {

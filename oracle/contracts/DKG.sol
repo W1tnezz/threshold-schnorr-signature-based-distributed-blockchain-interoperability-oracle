@@ -12,13 +12,11 @@ contract DKG{
         registry = Registry(_registryContract);
     }
 
-    event DistKey(address indexed aggregator, uint256[2] pubKey);
+    event DistKey(uint256[2] pubKey);
 
     uint256 private remain;
 
     uint256[2] private Y;
-
-    address private aggregator;
 
     address[] private validators;
 
@@ -34,15 +32,10 @@ contract DKG{
             require(validators[i] != msg.sender, "ENROLLED");
         }
 
-        if(validators.length == 0){
-            aggregator = msg.sender;
-            return true;
-        }
-
         validators.push(msg.sender);
         if(validators.length >= (registry.countOracleNodes() - 1) / 2 + 1){
             distKey();
-            remain = 8;
+            remain = 4;
         }
         return true;
     }
@@ -73,7 +66,7 @@ contract DKG{
         Y[0] = key[0];
         Y[1] = key[1];
 
-        emit DistKey(aggregator, Y);
+        emit DistKey(Y);
     }
 
     function getPubKey() public view returns (uint256[2] memory) {
@@ -83,14 +76,6 @@ contract DKG{
     function usePubKey() public  returns (uint256[2] memory) {
         remain--;
         return Y;
-    }
-
-    function isAggregator(address addr) public view returns (bool){
-        return aggregator == addr;
-    }
-
-    function getAggregator() public view returns (address){
-        return aggregator;
     }
 
     function getValidators() public view returns (address[] memory){
