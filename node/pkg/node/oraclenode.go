@@ -60,12 +60,23 @@ func NewOracleNode(c Config) (*OracleNode, error) {
 
 	// 注册
 
+	oracleContract, err := NewOracleContract(common.HexToAddress(c.Contracts.OracleContractAddress), targetEthClient)
+	if err != nil {
+		return nil, fmt.Errorf("oracle contract: %v", err)
+	}
+
+	registryContract, err := NewRegistry(common.HexToAddress(c.Contracts.RegistryContractAddress), targetEthClient)
 	if err != nil {
 		return nil, fmt.Errorf("registry contract: %v", err)
 	}
 
-	oracleContract, err := NewOracleContract(common.HexToAddress(c.Contracts.OracleContractAddress), targetEthClient)
+	dkgContract, err := NewDKG(common.HexToAddress(c.Contracts.DistKeyContractAddress), targetEthClient)
+	if err != nil {
+		return nil, fmt.Errorf("dkg contract: %v", err)
+	}
 	oracleContractWrapper := &OracleContractWrapper{
+		Registry:       registryContract,
+		DKG:            dkgContract,
 		OracleContract: oracleContract,
 	}
 	if err != nil {
@@ -185,7 +196,8 @@ func (n *OracleNode) register(ipAddr string) error {
 	minStack, err := n.oracleContract.MinStake(nil)
 	auth.Value = minStack
 
-	privatekeyBigint, err := ScalarToBig(n.PrivateKey)
+	publicKey := n.suite.G1().Point().Mul(n.PrivateKey, nil)
+	privatekeyBigint, err := G1PointToBig(publicKey)
 	if err != nil {
 		return fmt.Errorf("scalarToBig err : %w", err)
 	}
@@ -193,7 +205,7 @@ func (n *OracleNode) register(ipAddr string) error {
 	if err != nil {
 		return fmt.Errorf("register iop node: %w", err)
 	}
-	
+
 	return nil
 }
 

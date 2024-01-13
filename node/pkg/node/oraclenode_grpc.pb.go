@@ -19,9 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	OracleNode_Validate_FullMethodName       = "/iop.OracleNode/Validate"
-	OracleNode_Enroll_FullMethodName         = "/iop.OracleNode/Enroll"
-	OracleNode_GetEnrollNodes_FullMethodName = "/iop.OracleNode/GetEnrollNodes"
+	OracleNode_Validate_FullMethodName = "/node.OracleNode/Validate"
 )
 
 // OracleNodeClient is the client API for OracleNode service.
@@ -29,8 +27,6 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OracleNodeClient interface {
 	Validate(ctx context.Context, in *ValidateRequest, opts ...grpc.CallOption) (*ValidateResponse, error)
-	Enroll(ctx context.Context, in *SendEnrollRequest, opts ...grpc.CallOption) (*SendEnrollResponse, error)
-	GetEnrollNodes(ctx context.Context, in *SendGetEnrollNodesRequest, opts ...grpc.CallOption) (*SendEnrollNodesResponse, error)
 }
 
 type oracleNodeClient struct {
@@ -50,31 +46,11 @@ func (c *oracleNodeClient) Validate(ctx context.Context, in *ValidateRequest, op
 	return out, nil
 }
 
-func (c *oracleNodeClient) Enroll(ctx context.Context, in *SendEnrollRequest, opts ...grpc.CallOption) (*SendEnrollResponse, error) {
-	out := new(SendEnrollResponse)
-	err := c.cc.Invoke(ctx, OracleNode_Enroll_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *oracleNodeClient) GetEnrollNodes(ctx context.Context, in *SendGetEnrollNodesRequest, opts ...grpc.CallOption) (*SendEnrollNodesResponse, error) {
-	out := new(SendEnrollNodesResponse)
-	err := c.cc.Invoke(ctx, OracleNode_GetEnrollNodes_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // OracleNodeServer is the server API for OracleNode service.
 // All implementations must embed UnimplementedOracleNodeServer
 // for forward compatibility
 type OracleNodeServer interface {
 	Validate(context.Context, *ValidateRequest) (*ValidateResponse, error)
-	Enroll(context.Context, *SendEnrollRequest) (*SendEnrollResponse, error)
-	GetEnrollNodes(context.Context, *SendGetEnrollNodesRequest) (*SendEnrollNodesResponse, error)
 	mustEmbedUnimplementedOracleNodeServer()
 }
 
@@ -84,12 +60,6 @@ type UnimplementedOracleNodeServer struct {
 
 func (UnimplementedOracleNodeServer) Validate(context.Context, *ValidateRequest) (*ValidateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Validate not implemented")
-}
-func (UnimplementedOracleNodeServer) Enroll(context.Context, *SendEnrollRequest) (*SendEnrollResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Enroll not implemented")
-}
-func (UnimplementedOracleNodeServer) GetEnrollNodes(context.Context, *SendGetEnrollNodesRequest) (*SendEnrollNodesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetEnrollNodes not implemented")
 }
 func (UnimplementedOracleNodeServer) mustEmbedUnimplementedOracleNodeServer() {}
 
@@ -122,60 +92,16 @@ func _OracleNode_Validate_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _OracleNode_Enroll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendEnrollRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(OracleNodeServer).Enroll(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: OracleNode_Enroll_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OracleNodeServer).Enroll(ctx, req.(*SendEnrollRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _OracleNode_GetEnrollNodes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendGetEnrollNodesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(OracleNodeServer).GetEnrollNodes(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: OracleNode_GetEnrollNodes_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OracleNodeServer).GetEnrollNodes(ctx, req.(*SendGetEnrollNodesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // OracleNode_ServiceDesc is the grpc.ServiceDesc for OracleNode service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var OracleNode_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "iop.OracleNode",
+	ServiceName: "node.OracleNode",
 	HandlerType: (*OracleNodeServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Validate",
 			Handler:    _OracleNode_Validate_Handler,
-		},
-		{
-			MethodName: "Enroll",
-			Handler:    _OracleNode_Enroll_Handler,
-		},
-		{
-			MethodName: "GetEnrollNodes",
-			Handler:    _OracleNode_GetEnrollNodes_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

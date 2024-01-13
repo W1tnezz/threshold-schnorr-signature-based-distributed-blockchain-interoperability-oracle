@@ -33,40 +33,44 @@ func (n *OracleNode) Validate(ctx context.Context, request *ValidateRequest) (*V
 	var result *ValidateResult
 	var err error
 
-	switch request.Type {
-	case ValidateRequest_block:
-		result, err = n.validator.ValidateBlock(
-			ctx,
-			common.BytesToHash(request.Hash),
-		)
-	case ValidateRequest_transaction:
-		result, err = n.validator.ValidateTransaction(
-			ctx,
-			common.BytesToHash(request.Hash),
-			request.Size,
-			request.MinRank,
-		)
-	}
+	// switch request.Type {
+	// case ValidateRequest_block:
+	// 	result, err = n.validator.ValidateBlock(
+	// 		ctx,
+	// 		common.BytesToHash(request.Hash),
+	// 	)
+	// case ValidateRequest_transaction:
+	// 	result, err = n.validator.ValidateTransaction(
+	// 		ctx,
+	// 		common.BytesToHash(request.Hash),
+	// 		request.Size,
+	// 		request.MinRank,
+	// 	)
+	// }
+	result, err = n.validator.ValidateTransaction(
+		ctx,
+		common.BytesToHash(request.Hash),
+	)
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "validate %s: %v", request.Type, err)
+		return nil, status.Errorf(codes.Internal, "validate %s: %v", request.Hash, err)
 	}
 
 	resultStr := "valid"
 	if !result.valid {
 		resultStr = "invalid"
 	}
-	log.Infof("Validated hash %s of type %s with result: %s", common.BytesToHash(request.Hash), request.Type, resultStr)
+	log.Infof("Validated hash %s  with result: %s", common.BytesToHash(request.Hash), resultStr)
 
 	return ValidateResultToResponse(result), nil
 }
 
 func ValidateResultToResponse(result *ValidateResult) *ValidateResponse {
 	resp := &ValidateResponse{
-		Hash:       result.hash[:],
-		Valid:      result.valid,
-		Signature:  result.signature,
-		R:          result.R,
+		Hash:      result.hash[:],
+		Valid:     result.valid,
+		Signature: result.signature,
+		R:         result.R,
 	}
 
 	if result.blockNumber != nil {

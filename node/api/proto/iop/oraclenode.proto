@@ -1,16 +1,10 @@
 syntax = "proto3";
 
-package iop;
-option go_package = "./iop";
+package node;
+option go_package = "./node";
 
 message ValidateRequest {
-  enum Type {
-    unknown = 0;
-    block = 1;
-    transaction = 2;
-  }
-  Type type = 1;
-  bytes hash = 2;
+  bytes hash = 1;
 }
 
 message ValidateResponse {
@@ -19,6 +13,7 @@ message ValidateResponse {
   int64 blockNumber = 3;
   bytes signature = 4;
   bytes R = 5;
+  bytes message = 6;
 }
 
 service OracleNode {

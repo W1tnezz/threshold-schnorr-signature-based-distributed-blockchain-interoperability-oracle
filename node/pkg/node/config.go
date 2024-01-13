@@ -10,6 +10,7 @@ type Config struct {
 }
 
 type ContractsConfig struct {
+	RegistryContractAddress string
 	OracleContractAddress   string
 	DistKeyContractAddress  string
 }
@@ -22,7 +23,7 @@ type EthereumConfig struct {
 }
 
 type KafkaConfig struct {
-	IpAddress     string
-	Topic         string
-	Partition     int64
+	IpAddress string
+	Topic     string
+	Partition int64
 }

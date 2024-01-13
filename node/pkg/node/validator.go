@@ -30,6 +30,7 @@ type ValidateResult struct {
 	blockNumber *big.Int
 	signature   []byte
 	R           []byte
+	message     []byte
 }
 
 type Validator struct {
@@ -88,7 +89,7 @@ func (v *Validator) Sign(message []byte) ([][]byte, error) {
 
 	// 此时需要获取到其他人的R,此时需要等待其他人广播完成，获取完全足够的R
 	timeout := time.After(Timeout)
-	count, err := v.oracleContract.CountEnrollNodes(nil)
+	validators, err := v.oracleContract.DKG.GetValidators(nil)
 loop:
 	for {
 		select {
@@ -96,7 +97,7 @@ loop:
 			fmt.Errorf("Timeout")
 			break loop
 		default:
-			if count.Int64() == int64(len(v.RAll)) {
+			if len(validators) == len(v.RAll) {
 				break loop
 			}
 			time.Sleep(50 * time.Millisecond)
@@ -107,20 +108,27 @@ loop:
 	for key := range v.RAll {
 		R = v.suite.G1().Point().Add(R, v.RAll[key])
 	}
+	lamBig, err := v.oracleContract.Registry.GetLambda(nil, v.account)
+	if err != nil {
+		log.Errorf("get lam err : %w", err)
+	}
 
-	lam, Y := v.suite.G1().Scalar().Pick(v.suite.RandomStream()), v.suite.G1().Point().Pick(v.suite.RandomStream())
+	YBig, err := v.oracleContract.DKG.GetPubKey(nil)
+	if err != nil {
+		log.Errorf("get Y err : %w", err)
+	}
+
+	lam := v.suite.G1().Scalar().SetBytes(lamBig.Bytes())
+
 	m := message
 	RByte, err := R.MarshalBinary()
 	if err != nil {
 		log.Errorf("marshal R error : %w", err)
 	}
-	YBytes, err := Y.MarshalBinary()
-	if err != nil {
-		log.Errorf("marshal Y error : %w", err)
-	}
 
 	m = append(m, RByte...)
-	m = append(m, YBytes...)
+	m = append(m, YBig[0].Bytes()...)
+	m = append(m, YBig[1].Bytes()...)
 
 	hash := sha256.New()
 	hash.Write(m)
@@ -138,53 +146,6 @@ loop:
 	return signature, nil
 
 }
-
-// func (v *Validator) SignForBls(message []byte, enrollNodes []int64) ([][]byte, error) {
-// 	hash := sha256.New()
-// 	hash.Write(message)
-
-// 	messageHash := hash.Sum(nil)
-
-// 	_hash := v.suite.G1().Point().Mul(v.suite.G1().Scalar().SetBytes(messageHash), nil)
-
-// 	signature := make([][]byte, 2)
-// 	node, _ := v.oracleContract.FindOracleNodeByAddress(nil, v.account)
-
-// 	for i := int64(0); i < v.reputation; i++ {
-// 		sI := v.suite.G1().Point().Mul(v.privateKey[i], _hash)
-// 		pubkey := node.BlsPubKeys[i]
-// 		fmt.Println("141", pubkey)
-
-// 		PKbytes := make([]byte, 0)
-
-// 		for _, z := range [4]int{1, 0, 3, 2} {
-
-// 			sub := 32 - len(pubkey[z].Bytes())
-
-// 			bigByte := make([]byte, sub)
-
-// 			// for i := 0; i < sub; i++ {
-// 			// 	bigByte = append(bigByte, 0)
-// 			// }
-
-// 			bigByte = append(bigByte, pubkey[z].Bytes()...)
-// 			PKbytes = append(PKbytes, bigByte...)
-
-// 		}
-// 		pk := v.suite.G2().Point()
-// 		err := pk.UnmarshalBinary(PKbytes)
-// 		if err != nil {
-// 			fmt.Println("161 translate pk", err)
-// 		}
-// 		fmt.Println("139", v.suite.Pair(_hash, pk).Equal(v.suite.Pair(sI, v.suite.G2().Point().Base())))
-// 		siBytes, _ := sI.MarshalBinary()
-// 		for _, b := range siBytes {
-// 			signature[0] = append(signature[0], b)
-// 		}
-// 	}
-// 	return signature, nil
-
-// }
 
 func (v *Validator) ListenAndProcess(o *OracleNode) error {
 
@@ -234,7 +195,7 @@ func (v *Validator) sendR(R []byte) {
 	}
 }
 
-func (v *Validator) ValidateTransaction(ctx context.Context, hash common.Hash, size int64, minRank int64) (*ValidateResult, error) {
+func (v *Validator) ValidateTransaction(ctx context.Context, hash common.Hash) (*ValidateResult, error) {
 	log.Info("请求 receipt")
 	receipt, err := v.ethClient.TransactionReceipt(ctx, hash)
 	found := !errors.Is(err, ethereum.NotFound)
@@ -253,7 +214,7 @@ func (v *Validator) ValidateTransaction(ctx context.Context, hash common.Hash, s
 		valid = confirmed >= CONFIRMATIONS
 	}
 
-	message, err := encodeValidateResult(hash, valid, ValidateRequest_transaction)
+	message, err := encodeValidateResult(hash, valid)
 	if err != nil {
 		return nil, fmt.Errorf("encode result: %w", err)
 	}
@@ -275,49 +236,50 @@ func (v *Validator) ValidateTransaction(ctx context.Context, hash common.Hash, s
 		big.NewInt(int64(blockNumber)),
 		sig[0],
 		sig[1],
+		message,
 	}, nil
 }
 
-func (v *Validator) ValidateBlock(ctx context.Context, hash common.Hash) (*ValidateResult, error) {
-	block, err := v.ethClient.BlockByHash(ctx, hash)
-	found := !errors.Is(err, ethereum.NotFound)
-	if err != nil && found {
-		return nil, fmt.Errorf("block: %w", err)
-	}
+// func (v *Validator) ValidateBlock(ctx context.Context, hash common.Hash) (*ValidateResult, error) {
+// 	block, err := v.ethClient.BlockByHash(ctx, hash)
+// 	found := !errors.Is(err, ethereum.NotFound)
+// 	if err != nil && found {
+// 		return nil, fmt.Errorf("block: %w", err)
+// 	}
 
-	latestBlockNumber, err := v.ethClient.BlockNumber(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("blocknumber: %w", err)
-	}
+// 	latestBlockNumber, err := v.ethClient.BlockNumber(ctx)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("blocknumber: %w", err)
+// 	}
 
-	var blockNumber *big.Int
-	valid := false
-	if found {
-		blockNumber = block.Number()
-		confirmed := latestBlockNumber - block.NumberU64()
-		valid = confirmed >= CONFIRMATIONS
-	}
+// 	var blockNumber *big.Int
+// 	valid := false
+// 	if found {
+// 		blockNumber = block.Number()
+// 		confirmed := latestBlockNumber - block.NumberU64()
+// 		valid = confirmed >= CONFIRMATIONS
+// 	}
 
-	message, err := encodeValidateResult(hash, valid, ValidateRequest_block)
-	if err != nil {
-		return nil, fmt.Errorf("encode result: %w", err)
-	}
+// 	message, err := encodeValidateResult(hash, valid, ValidateRequest_block)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("encode result: %w", err)
+// 	}
 
-	// distKey, err := v.dkg.DistKeyShare()
-	if err != nil {
-		return nil, fmt.Errorf("dist key share: %w", err)
-	}
+// 	// distKey, err := v.dkg.DistKeyShare()
+// 	if err != nil {
+// 		return nil, fmt.Errorf("dist key share: %w", err)
+// 	}
 
-	sig, err := v.Sign(message)
-	if err != nil {
-		return nil, fmt.Errorf("tbls sign: %w", err)
-	}
+// 	sig, err := v.Sign(message)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("tbls sign: %w", err)
+// 	}
 
-	return &ValidateResult{
-		hash,
-		valid,
-		blockNumber,
-		sig[0],
-		sig[1],
-	}, nil
-}
+// 	return &ValidateResult{
+// 		hash,
+// 		valid,
+// 		blockNumber,
+// 		sig[0],
+// 		sig[1],
+// 	}, nil
+// }
