@@ -180,6 +180,12 @@ func (n *OracleNode) Run() error {
 		}
 	}()
 
+	go func() {
+		if err := n.aggregator.WatchAndHandleDKGLog(context.Background()); err != nil {
+			log.Errorf("Watch and handle ValidationRequest log: %v", err)
+		}
+	}()
+
 	if err := n.register(n.serverLis.Addr().String()); err != nil {
 		return fmt.Errorf("register: %w", err)
 	}

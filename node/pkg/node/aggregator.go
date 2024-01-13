@@ -90,6 +90,7 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 				continue
 			}
 
+
 			if err := a.HandleValidationRequest(ctx, event); err != nil {
 				log.Errorf("Handle ValidationRequest log: %v", err)
 			}
@@ -103,17 +104,7 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 
 // 报名函数
 func (a *Aggregator) Enroll() error {
-	// isEnroll, err := a.oracleContract.DKG.Enroll(nil)
-	// if err != nil {
-	// 	return fmt.Errorf("is enrolled: %w", err)
-	// }
-	// if !isEnroll {
-	// 	auth, err := bind.NewKeyedTransactorWithChainID(a.ecdsaPrivateKey, a.chainId)
-	// 	_, err = a.oracleContract.EnrollOracleNode(auth)
-	// 	if err != nil {
-	// 		return fmt.Errorf("enroll iop node: %w", err)
-	// 	}
-	// }
+	
 	auth, err := bind.NewKeyedTransactorWithChainID(a.ecdsaPrivateKey, a.chainId)
 	_, err = a.oracleContract.DKG.Enroll(auth)
 	if err != nil {
@@ -122,10 +113,40 @@ func (a *Aggregator) Enroll() error {
 	return nil
 }
 
+func (a *Aggregator) WatchAndHandleDKGLog(ctx context.Context, event *OracleContractValidationRequest) error {
+	sink := make(chan *DKGDistKey)
+	defer close(sink)
+
+	sub, err := a.oracleContract.DKG.WatchDistKey(
+		&bind.WatchOpts{
+			Context: context.Background(),
+		},
+		sink,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case event := <-sink:
+
+		case err = <-sub.Err():
+			return err
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
 func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleContractValidationRequest) error {
+
+	
+
 	result, MulSig, MulR, _hash, err := a.AggregateValidationResults(ctx, event.Hash) // schnorr
 	// result, MulSig, _hash, MulY, nodes, pkSet, err := a.AggregateValidationResults(ctx, event.Hash, typ)
-
 
 	if err != nil {
 		return fmt.Errorf("aggregate validation results: %w", err)
