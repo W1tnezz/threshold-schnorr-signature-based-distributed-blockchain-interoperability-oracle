@@ -1,7 +1,7 @@
 const BN256G1 = artifacts.require("BN256G1");
 const Registry = artifacts.require("Registry");
-const Sakai = artifacts.require("Sakai");
-const IBSAS = artifacts.require("IBSAS");
+const DKG = artifacts.require("DKG");
+const Oracle = artifacts.require("Oracle");
 module.exports = function (deployer) {
     deployer.deploy(Registry).then(
       function(){
@@ -9,19 +9,15 @@ module.exports = function (deployer) {
       }
     ).then(
       function(){
-        return deployer.link(BN256G1, Sakai);
+        return deployer.link(BN256G1, DKG);
       }
     ).then(
       function(){
-        return deployer.deploy(Sakai, Registry.address);
+        return deployer.deploy(DKG, Registry.address);
       }
     ).then(
       function(){
-        return deployer.link(BN256G1, IBSAS);
-      }
-    ).then(
-      function(){
-        return deployer.deploy(IBSAS, Registry.address);
+        return deployer.deploy(Oracle, Registry.address, DKG.address);
       }
     )
     
