@@ -143,6 +143,7 @@ func NewOracleNode(c Config) (*OracleNode, error) {
 		account,
 		ecdsaPrivateKey,
 		chainId,
+		false,
 	)
 	node := &OracleNode{
 		server:          server,

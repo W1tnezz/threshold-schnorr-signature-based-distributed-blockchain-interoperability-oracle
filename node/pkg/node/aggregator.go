@@ -27,6 +27,7 @@ type Aggregator struct {
 	account         common.Address
 	ecdsaPrivateKey *ecdsa.PrivateKey
 	chainId         *big.Int
+	DKGSuccess      bool
 }
 
 func NewAggregator(
@@ -36,7 +37,7 @@ func NewAggregator(
 	account common.Address,
 	ecdsaPrivateKey *ecdsa.PrivateKey,
 	chainId *big.Int,
-
+	DKGSuccess bool,
 ) *Aggregator {
 	return &Aggregator{
 		suite:           suite,
@@ -45,6 +46,7 @@ func NewAggregator(
 		account:         account,
 		ecdsaPrivateKey: ecdsaPrivateKey,
 		chainId:         chainId,
+		DKGSuccess:      DKGSuccess,
 	}
 }
 
@@ -90,6 +92,9 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 				continue
 			}
 
+			for !a.DKGSuccess {
+				log.Println("waiting DKG")
+			}
 
 			if err := a.HandleValidationRequest(ctx, event); err != nil {
 				log.Errorf("Handle ValidationRequest log: %v", err)
@@ -104,7 +109,7 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 
 // 报名函数
 func (a *Aggregator) Enroll() error {
-	
+
 	auth, err := bind.NewKeyedTransactorWithChainID(a.ecdsaPrivateKey, a.chainId)
 	_, err = a.oracleContract.DKG.Enroll(auth)
 	if err != nil {
@@ -113,7 +118,7 @@ func (a *Aggregator) Enroll() error {
 	return nil
 }
 
-func (a *Aggregator) WatchAndHandleDKGLog(ctx context.Context, event *OracleContractValidationRequest) error {
+func (a *Aggregator) WatchAndHandleDKGLog(ctx context.Context) error {
 	sink := make(chan *DKGDistKey)
 	defer close(sink)
 
@@ -122,7 +127,6 @@ func (a *Aggregator) WatchAndHandleDKGLog(ctx context.Context, event *OracleCont
 			Context: context.Background(),
 		},
 		sink,
-		nil,
 	)
 	if err != nil {
 		return err
@@ -132,7 +136,8 @@ func (a *Aggregator) WatchAndHandleDKGLog(ctx context.Context, event *OracleCont
 	for {
 		select {
 		case event := <-sink:
-
+			a.DKGSuccess = true
+			log.Println(event)
 		case err = <-sub.Err():
 			return err
 		case <-ctx.Done():
@@ -142,8 +147,6 @@ func (a *Aggregator) WatchAndHandleDKGLog(ctx context.Context, event *OracleCont
 }
 
 func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleContractValidationRequest) error {
-
-	
 
 	result, MulSig, MulR, _hash, err := a.AggregateValidationResults(ctx, event.Hash) // schnorr
 	// result, MulSig, _hash, MulY, nodes, pkSet, err := a.AggregateValidationResults(ctx, event.Hash, typ)

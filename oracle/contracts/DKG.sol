@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity  >0.8.0;
+pragma solidity >0.8.0;
 
 import "./crypto/BN256G1.sol";
 import "./crypto/BN256G2.sol";
 import "./Registry.sol";
 
-contract DKG{
+contract DKG {
     Registry private registry;
 
     constructor(address _registryContract) {
@@ -14,40 +14,40 @@ contract DKG{
 
     event DistKey(uint256[2] pubKey);
 
-    uint256 private remain;
+    uint256[1] private remain;
 
     uint256[2] private Y;
 
     address[] private validators;
 
     function needEnroll() public view returns (bool) {
-        return remain == 0;
+        return remain[0] == 0;
     }
 
-    function enroll() external returns (bool){
-        if(remain != 0){
+    function enroll() external returns (bool) {
+        if (remain[0] != 0) {
             return false;
         }
-        for(uint i = 0; i < validators.length; i++){
+        for (uint i = 0; i < validators.length; i++) {
             require(validators[i] != msg.sender, "ENROLLED");
         }
 
         validators.push(msg.sender);
-        if(validators.length >= (registry.countOracleNodes() - 1) / 2 + 1){
-            distKey();
-            remain = 4;
+        if (validators.length >= (registry.countOracleNodes() - 1) / 2 + 1) {
+            // distKey();
+            remain[0] = 4;
         }
         return true;
     }
 
     function distKey() private {
         uint256[2] memory key;
-        for(uint i = 0; i < validators.length; i++){
+        for (uint i = 0; i < validators.length; i++) {
             int256 lambda1 = 1;
             int256 lambda2 = 1;
             int256 indexI = int256(registry.getIndex(validators[i]));
-            for(uint j = 0; j < validators.length; j++){
-                if(i != j){
+            for (uint j = 0; j < validators.length; j++) {
+                if (i != j) {
                     int256 indexJ = int256(registry.getIndex(validators[j]));
                     lambda1 *= (-indexJ);
                     lambda2 = lambda2 * (indexI - indexJ);
@@ -73,13 +73,12 @@ contract DKG{
         return Y;
     }
 
-    function usePubKey() public  returns (uint256[2] memory) {
-        remain--;
+    function usePubKey() public returns (uint256[2] memory) {
+        remain[0]--;
         return Y;
     }
 
-    function getValidators() public view returns (address[] memory){
+    function getValidators() public view returns (address[] memory) {
         return validators;
     }
 }
-
