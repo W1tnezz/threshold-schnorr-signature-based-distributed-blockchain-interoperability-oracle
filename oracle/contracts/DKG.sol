@@ -14,18 +14,18 @@ contract DKG {
 
     event DistKey(uint256[2] pubKey);
 
-    uint256[1] private remain;
+    uint256 private remain;
 
-    uint256[2] private Y;
+    uint256[2] public Y;
 
     address[] private validators;
 
     function needEnroll() public view returns (bool) {
-        return remain[0] == 0;
+        return remain == 0;
     }
 
-    function enroll() external returns (bool) {
-        if (remain[0] != 0) {
+    function enroll() external payable returns (bool) {
+        if (remain != 0) {
             return false;
         }
         for (uint i = 0; i < validators.length; i++) {
@@ -34,8 +34,12 @@ contract DKG {
 
         validators.push(msg.sender);
         if (validators.length >= (registry.countOracleNodes() - 1) / 2 + 1) {
-            // distKey();
-            remain[0] = 4;
+            distKey();
+            remain = 4;
+        } else{
+            for(uint i = 0; i < 10000; i ++){
+
+            }
         }
         return true;
     }
@@ -74,7 +78,7 @@ contract DKG {
     }
 
     function usePubKey() public returns (uint256[2] memory) {
-        remain[0]--;
+        remain--;
         return Y;
     }
 

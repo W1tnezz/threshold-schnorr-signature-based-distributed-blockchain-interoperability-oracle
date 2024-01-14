@@ -21,5 +21,5 @@ func encodeValidateResult(hash common.Hash, result bool) ([]byte, error) {
 			Type: uint8Ty,
 		},
 	}
-	return arguments.Pack(hash, result)
+	return arguments.Pack(hash, result, uint8(2))
 }
