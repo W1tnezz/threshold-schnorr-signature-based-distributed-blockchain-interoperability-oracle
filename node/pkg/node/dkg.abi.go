@@ -31,7 +31,7 @@ var (
 
 // DKGMetaData contains all meta data concerning the DKG contract.
 var DKGMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_registryContract\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256[2]\",\"name\":\"pubKey\",\"type\":\"uint256[2]\"}],\"name\":\"DistKey\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"enroll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPubKey\",\"outputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"\",\"type\":\"uint256[2]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"needEnroll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"usePubKey\",\"outputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"\",\"type\":\"uint256[2]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_registryContract\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256[2]\",\"name\":\"pubKey\",\"type\":\"uint256[2]\"}],\"name\":\"DistKey\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"Y\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"enroll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPubKey\",\"outputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"\",\"type\":\"uint256[2]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"needEnroll\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"usePubKey\",\"outputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"\",\"type\":\"uint256[2]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // DKGABI is the input ABI used to generate the binding from.
@@ -180,6 +180,37 @@ func (_DKG *DKGTransactorRaw) Transact(opts *bind.TransactOpts, method string, p
 	return _DKG.Contract.contract.Transact(opts, method, params...)
 }
 
+// Y is a free data retrieval call binding the contract method 0xa63f6e5f.
+//
+// Solidity: function Y(uint256 ) view returns(uint256)
+func (_DKG *DKGCaller) Y(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _DKG.contract.Call(opts, &out, "Y", arg0)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// Y is a free data retrieval call binding the contract method 0xa63f6e5f.
+//
+// Solidity: function Y(uint256 ) view returns(uint256)
+func (_DKG *DKGSession) Y(arg0 *big.Int) (*big.Int, error) {
+	return _DKG.Contract.Y(&_DKG.CallOpts, arg0)
+}
+
+// Y is a free data retrieval call binding the contract method 0xa63f6e5f.
+//
+// Solidity: function Y(uint256 ) view returns(uint256)
+func (_DKG *DKGCallerSession) Y(arg0 *big.Int) (*big.Int, error) {
+	return _DKG.Contract.Y(&_DKG.CallOpts, arg0)
+}
+
 // GetPubKey is a free data retrieval call binding the contract method 0x4ad02ef1.
 //
 // Solidity: function getPubKey() view returns(uint256[2])
@@ -275,21 +306,21 @@ func (_DKG *DKGCallerSession) NeedEnroll() (bool, error) {
 
 // Enroll is a paid mutator transaction binding the contract method 0xe65f2a7e.
 //
-// Solidity: function enroll() returns(bool)
+// Solidity: function enroll() payable returns(bool)
 func (_DKG *DKGTransactor) Enroll(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _DKG.contract.Transact(opts, "enroll")
 }
 
 // Enroll is a paid mutator transaction binding the contract method 0xe65f2a7e.
 //
-// Solidity: function enroll() returns(bool)
+// Solidity: function enroll() payable returns(bool)
 func (_DKG *DKGSession) Enroll() (*types.Transaction, error) {
 	return _DKG.Contract.Enroll(&_DKG.TransactOpts)
 }
 
 // Enroll is a paid mutator transaction binding the contract method 0xe65f2a7e.
 //
-// Solidity: function enroll() returns(bool)
+// Solidity: function enroll() payable returns(bool)
 func (_DKG *DKGTransactorSession) Enroll() (*types.Transaction, error) {
 	return _DKG.Contract.Enroll(&_DKG.TransactOpts)
 }

@@ -52,40 +52,7 @@ contract Oracle {
         emit ValidationRequest(msg.sender, _message, dkg.needEnroll());
     }
 
-    // function submit(
-    //     bool res,
-    //     bytes32 message,
-    //     uint256 signature,
-    //     uint256 rx,
-    //     uint256 ry,
-    //     uint256 _hash
-    // ) external {
-    //     uint256[2] memory pubKey = dkg.usePubKey();
-
-    //     require(
-    //         Schnorr.verify(signature, pubKey[0], pubKey[1], rx, ry, _hash),
-    //         "sig: address doesn't match"
-    //     );
-
-    //     txValidationResults[message] = res;
-
-    //     // 给当前合约的调用者（聚合器）转账
-    //     payable(msg.sender).transfer(AGGREGATE_FEE); //此处完成给聚合器的报酬转账
-
-    //     //  // 给所有的参与验证的验证器节点转账
-    //     address[] memory validators = dkg.getValidators();
-    //     for (uint32 i = 0; i < validators.length; i++) {
-    //         payable(validators[i]).transfer(BASE_FEE);
-    //     }
-    // }
-    function submit(
-        bool res,
-        bytes32 transHash,
-        bytes memory message,
-        uint256 signature,
-        uint256 rx,
-        uint256 ry
-    ) external {
+    function submit(bool res, bytes32 transHash, bytes memory message, uint256 signature, uint256 rx , uint256 ry) external{
         uint256[2] memory pubKey = dkg.usePubKey();
 
         uint256 _hash = uint256(
@@ -99,9 +66,9 @@ contract Oracle {
 
         // txValidationResults[transHash] = res;
 
-        //  // 给当前合约的调用者（聚合器）转账
-        // payable(msg.sender).transfer(AGGREGATE_FEE);     //此处完成给聚合器的报酬转账
-
+        //  // 给当前合约的调用者（聚合器）转账 
+        // payable(msg.sender).transfer(AGGREGATE_FEE);     //此处完成给聚合器的报酬转账
+        
         //  // 给所有的参与验证的验证器节点转账
         // address[] memory validators = dkg.getValidators();
         // for(uint32 i = 0 ; i < validators.length ; i++){
