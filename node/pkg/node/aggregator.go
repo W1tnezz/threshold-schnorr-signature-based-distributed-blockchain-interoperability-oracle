@@ -180,11 +180,12 @@ func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleC
 		return fmt.Errorf("multi R tranform to big int: %w", err)
 	}
 	hash, err := ScalarToBig(_hash) //schnorr
+	_ = hash
 	if err != nil {
 		return fmt.Errorf("hash tranform to big int: %w", err)
 	}
 
-	_, err = a.oracleContract.OracleContract.Submit(auth, result, event.Hash, message, sig, R[0], R[1], hash)
+	_, err = a.oracleContract.OracleContract.Submit(auth, result, event.Hash, message, sig, R[0], R[1])
 
 	if err != nil {
 		return fmt.Errorf("submit verification: %w", err)

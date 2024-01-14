@@ -51,6 +51,7 @@ contract Registry {
             NodeArr[index - 1] = NodeArr[index];
         }
         NodeArr.pop();
+        delete NodeMap[msg.sender];
     }
 
     function minStake() public pure returns (uint256){

@@ -20,8 +20,12 @@ contract DKG {
 
     address[] private validators;
 
-    function needEnroll() public view returns (bool) {
-        return remain == 0;
+    function needEnroll() public returns (bool) {
+        if(remain == 0){
+            delete validators;
+            return true;
+        }
+        return false;
     }
 
     function enroll() external payable returns (bool) {
@@ -35,7 +39,7 @@ contract DKG {
         validators.push(msg.sender);
         if (validators.length >= (registry.countOracleNodes() - 1) / 2 + 1) {
             distKey();
-            remain[0] = 4;
+            remain = 4;
         } else {
             for (uint i = 0; i < 10000; i++) {}
         }
