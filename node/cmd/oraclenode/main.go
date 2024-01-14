@@ -2,15 +2,17 @@ package main
 
 import (
 	"flag"
+	"log"
 	"node/pkg/node"
 	"os"
 	"os/signal"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
 func main() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	log.SetOutput(os.Stdout)
 	commonConfig := "./configs/common.json"
 	configFile := flag.String("c", "./configs/config.json", "filename of the config file")
 	flag.Parse()
@@ -35,7 +37,7 @@ func main() {
 		log.Fatalf("Unmarshal config into struct, %v", err)
 	}
 
-	log.Infof("Loaded config file %s", *configFile)
+	log.Println("Loaded config file %s", *configFile)
 
 	node, err := node.NewOracleNode(config) // 根据config初始化node
 	if err != nil {

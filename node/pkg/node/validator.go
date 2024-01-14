@@ -12,11 +12,12 @@ import (
 	"sync"
 	"time"
 
+	"log"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/segmentio/kafka-go"
-	log "github.com/sirupsen/logrus"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing"
 	"go.dedis.ch/kyber/v3/util/random"
@@ -81,10 +82,10 @@ func (v *Validator) Sign(message []byte) ([][]byte, error) {
 	RiBytes, err := Ri.MarshalBinary()
 
 	if err != nil {
-		log.Errorf("marshal R_i error : %v", err)
+		log.Println("marshal R_i error : %v", err)
 	}
 
-	log.Infof("Start send kafka message R")
+	log.Println("Start send kafka message R")
 	v.sendR(RiBytes)
 
 	// 此时需要获取到其他人的R,此时需要等待其他人广播完成，获取完全足够的R
@@ -110,12 +111,12 @@ loop:
 	}
 	lamBig, err := v.oracleContract.Registry.GetLambda(nil, v.account)
 	if err != nil {
-		log.Errorf("get lam err : %w", err)
+		log.Println("get lam err : %w", err)
 	}
 
 	YBig, err := v.oracleContract.DKG.GetPubKey(nil)
 	if err != nil {
-		log.Errorf("get Y err : %w", err)
+		log.Println("get Y err : %w", err)
 	}
 
 	lam := v.suite.G1().Scalar().SetBytes(lamBig.Bytes())
@@ -123,7 +124,7 @@ loop:
 	m := message
 	RByte, err := R.MarshalBinary()
 	if err != nil {
-		log.Errorf("marshal R error : %w", err)
+		log.Println("marshal R error : %w", err)
 	}
 
 	m = append(m, RByte...)
@@ -139,10 +140,13 @@ loop:
 
 	signature[0], err = z.MarshalBinary()
 	if err != nil {
-		log.Errorf("marshal z error : %w", err)
+		log.Println("marshal z error : %w", err)
 	}
-	signature[1] = RByte
+	signature[1] = RiBytes
 
+	// pk := v.suite.G1().Point().Mul(lam, v.suite.G1().Point().Mul(v.privateKey, nil))
+	// pkByte, _ := pk.MarshalBinary()
+	// signature[1] = pkByte
 	return signature, nil
 
 }
@@ -160,7 +164,7 @@ func (v *Validator) ListenAndProcess(o *OracleNode) error {
 				RPoint := v.suite.G1().Point()
 				err := RPoint.UnmarshalBinary(m.Value)
 				if err != nil {
-					log.Errorf("R transform to Point: %v", err)
+					log.Println("R transform to Point: %v", err)
 				}
 				v.RAll[common.Address(m.Key)] = RPoint
 			}()
@@ -196,13 +200,13 @@ func (v *Validator) sendR(R []byte) {
 }
 
 func (v *Validator) ValidateTransaction(ctx context.Context, hash common.Hash) (*ValidateResult, error) {
-	log.Info("请求 receipt")
+	log.Println("请求 receipt")
 	receipt, err := v.ethClient.TransactionReceipt(ctx, hash)
 	found := !errors.Is(err, ethereum.NotFound)
 	if err != nil {
 		return nil, fmt.Errorf("transaction receipt: %w", err)
 	}
-	log.Info("请求 blocknumber")
+	log.Println("请求 blocknumber")
 	blockNumber, err := v.ethClient.BlockNumber(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("blocknumber: %w", err)
