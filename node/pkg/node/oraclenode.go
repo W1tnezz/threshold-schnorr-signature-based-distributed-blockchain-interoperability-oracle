@@ -177,13 +177,13 @@ func (n *OracleNode) Run() error {
 
 	go func() {
 		if err := n.aggregator.WatchAndHandleValidationRequestsLog(context.Background(), n); err != nil {
-			log.Println("Watch and handle ValidationRequest log: %v", err)
+			log.Println("Watch and handle ValidationRequest log: ", err)
 		}
 	}()
 
 	go func() {
 		if err := n.aggregator.WatchAndHandleDKGLog(context.Background()); err != nil {
-			log.Println("Watch and handle ValidationRequest log: %v", err)
+			log.Println("Watch and handle ValidationRequest log: ", err)
 		}
 	}()
 

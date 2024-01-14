@@ -37,7 +37,7 @@ func main() {
 		log.Fatalf("Unmarshal config into struct, %v", err)
 	}
 
-	log.Println("Loaded config file %s", *configFile)
+	log.Println("Loaded config file ", *configFile)
 
 	node, err := node.NewOracleNode(config) // 根据config初始化node
 	if err != nil {
