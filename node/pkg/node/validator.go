@@ -82,7 +82,7 @@ func (v *Validator) Sign(message []byte) ([][]byte, error) {
 	RiBytes, err := Ri.MarshalBinary()
 
 	if err != nil {
-		log.Println("marshal R_i error : %v", err)
+		log.Println("marshal R_i error : ", err)
 	}
 
 	log.Println("Start send kafka message R")
@@ -111,12 +111,12 @@ loop:
 	}
 	lamBig, err := v.oracleContract.Registry.GetLambda(nil, v.account)
 	if err != nil {
-		log.Println("get lam err : %w", err)
+		log.Println("get lam err : ", err)
 	}
 
 	YBig, err := v.oracleContract.DKG.GetPubKey(nil)
 	if err != nil {
-		log.Println("get Y err : %w", err)
+		log.Println("get Y err : ", err)
 	}
 
 	lam := v.suite.G1().Scalar().SetBytes(lamBig.Bytes())
@@ -124,7 +124,7 @@ loop:
 	m := message
 	RByte, err := R.MarshalBinary()
 	if err != nil {
-		log.Println("marshal R error : %w", err)
+		log.Println("marshal R error : ", err)
 	}
 
 	m = append(m, RByte...)
@@ -140,7 +140,7 @@ loop:
 
 	signature[0], err = z.MarshalBinary()
 	if err != nil {
-		log.Println("marshal z error : %w", err)
+		log.Println("marshal z error : ", err)
 	}
 	signature[1] = RiBytes
 
@@ -164,7 +164,7 @@ func (v *Validator) ListenAndProcess(o *OracleNode) error {
 				RPoint := v.suite.G1().Point()
 				err := RPoint.UnmarshalBinary(m.Value)
 				if err != nil {
-					log.Println("R transform to Point: %v", err)
+					log.Println("R transform to Point: ", err)
 				}
 				v.RAll[common.Address(m.Key)] = RPoint
 			}()

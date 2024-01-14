@@ -3,8 +3,9 @@ package node
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/common"
 	"log"
+
+	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -60,7 +61,7 @@ func (n *OracleNode) Validate(ctx context.Context, request *ValidateRequest) (*V
 	if !result.valid {
 		resultStr = "invalid"
 	}
-	log.Println("Validated hash %s  with result: %s", common.BytesToHash(request.Hash), resultStr)
+	log.Println("Validated hash:", common.BytesToHash(request.Hash), "with result: ", resultStr)
 
 	return ValidateResultToResponse(result), nil
 }

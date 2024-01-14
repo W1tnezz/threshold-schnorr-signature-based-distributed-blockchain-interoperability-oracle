@@ -3,7 +3,6 @@ package node
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/sha256"
 	"fmt"
 	"math/big"
 	"sync"
@@ -70,11 +69,11 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 	for {
 		select {
 		case event := <-sink:
-			log.Println("Received ValidationRequest event with hash %s", common.Hash(event.Hash))
+			log.Println("Received ValidationRequest event with hash ", common.Hash(event.Hash))
 			isAggregator, err := a.oracleContract.IsAggregator(nil, a.account)
 			o.isAggregator = isAggregator
 			if err != nil {
-				log.Println("Is aggregator: %v", err)
+				log.Println("Is aggregator: ", err)
 				continue
 			}
 
@@ -85,7 +84,7 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 
 				err = a.Enroll()
 				if err != nil {
-					log.Println("Node Enroll log: %v", err)
+					log.Println("Node Enroll log: ", err)
 				} else {
 					o.validator.enrolled = true
 					log.Println("Enroll success")
@@ -98,7 +97,7 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 			}
 
 			if err := a.HandleValidationRequest(ctx, event); err != nil {
-				log.Println("Handle ValidationRequest log: %v", err)
+				log.Println("Handle ValidationRequest log: ", err)
 			}
 		case err = <-sub.Err():
 			return err
@@ -138,7 +137,7 @@ func (a *Aggregator) WatchAndHandleDKGLog(ctx context.Context) error {
 		select {
 		case event := <-sink:
 			a.DKGSuccess = true
-			log.Println(event.PubKey)
+			_ = event
 		case err = <-sub.Err():
 			return err
 		case <-ctx.Done():
@@ -150,7 +149,7 @@ func (a *Aggregator) WatchAndHandleDKGLog(ctx context.Context) error {
 func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleContractValidationRequest) error {
 
 	// result, MulSig, MulR, _hash, YBig, err := a.AggregateValidationResults(ctx, event.Hash) // schnorr
-	result, MulSig, MulR, _hash, message, err := a.AggregateValidationResults(ctx, event.Hash) // schnorr
+	result, MulSig, MulR, message, err := a.AggregateValidationResults(ctx, event.Hash) // schnorr
 
 	if err != nil {
 		return fmt.Errorf("aggregate validation results: %w", err)
@@ -186,6 +185,7 @@ func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleC
 	}
 
 	_, err = a.oracleContract.OracleContract.Submit(auth, result, event.Hash, message, sig, R[0], R[1])
+	_, err = a.oracleContract.OracleContract.Submit(auth, result, event.Hash, message, sig, R[0], R[1])
 
 	if err != nil {
 		return fmt.Errorf("submit verification: %w", err)
@@ -195,12 +195,12 @@ func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleC
 	if !result {
 		resultStr = "invalid"
 	}
-	log.Println("Submitted validation result (%s) for hash %s of type %s", resultStr, common.Hash(event.Hash))
+	log.Println("Submitted validation result () for hash  of type ", resultStr, common.Hash(event.Hash))
 
 	return nil
 }
 
-func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash common.Hash) (bool, kyber.Scalar, kyber.Point, kyber.Scalar, []byte, error) { // schnorr
+func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash common.Hash) (bool, kyber.Scalar, kyber.Point, []byte, error) { // schnorr
 
 	Signatures := make([]kyber.Scalar, 0)
 	Rs := make([]kyber.Point, 0)
@@ -210,7 +210,7 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 	// 获取到了报名的节点数
 	enrollNodes, err := a.oracleContract.GetValidators(nil)
 	if err != nil {
-		log.Println("get enrollNodes %w", err)
+		log.Println("get enrollNodes ", err)
 	}
 	var message []byte
 	for _, enrollNode := range enrollNodes {
@@ -218,7 +218,7 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 		node, _ := a.oracleContract.Registry.GetNodeByAddress(nil, enrollNode)
 		conn, err := grpc.Dial(node.IpAddr, grpc.WithInsecure())
 		if err != nil {
-			log.Println("Find connection by address: %v", err)
+			log.Println("Find connection by address: ", err)
 			continue
 		}
 
@@ -235,7 +235,7 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 
 			cancel()
 			if err != nil {
-				log.Println("Validate err : %v", err)
+				log.Println("Validate err :", err)
 				return
 			}
 
@@ -260,23 +260,6 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 		MulSig = a.suite.G1().Scalar().Add(MulSig, Signatures[index])
 	}
 
-	YBig, err := a.oracleContract.DKG.GetPubKey(nil)
-	if err != nil {
-		log.Println("get Y err : %w", err)
-	}
-
-	RByte, err := R.MarshalBinary()
-	if err != nil {
-		log.Println("marshal R error : %w", err)
-	}
-	m := message
-	m = append(m, RByte...)
-	m = append(m, YBig[0].Bytes()...)
-	m = append(m, YBig[1].Bytes()...)
-
-	hash := sha256.New()
-	hash.Write(m)
-	c := a.suite.G1().Scalar().SetBytes(hash.Sum(nil))
-	return true, MulSig, R, c, message, nil
+	return true, MulSig, R, message, nil
 
 }
