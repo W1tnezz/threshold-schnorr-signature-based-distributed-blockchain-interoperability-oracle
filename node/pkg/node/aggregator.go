@@ -11,10 +11,11 @@ import (
 
 	"google.golang.org/grpc"
 
+	"log"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	log "github.com/sirupsen/logrus"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing"
 )
@@ -69,11 +70,11 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 	for {
 		select {
 		case event := <-sink:
-			log.Infof("Received ValidationRequest event with hash %s", common.Hash(event.Hash))
+			log.Println("Received ValidationRequest event with hash %s", common.Hash(event.Hash))
 			isAggregator, err := a.oracleContract.IsAggregator(nil, a.account)
 			o.isAggregator = isAggregator
 			if err != nil {
-				log.Errorf("Is aggregator: %v", err)
+				log.Println("Is aggregator: %v", err)
 				continue
 			}
 
@@ -84,20 +85,20 @@ func (a *Aggregator) WatchAndHandleValidationRequestsLog(ctx context.Context, o 
 
 				err = a.Enroll()
 				if err != nil {
-					log.Errorf("Node Enroll log: %v", err)
+					log.Println("Node Enroll log: %v", err)
 				} else {
 					o.validator.enrolled = true
-					log.Infof("Enroll success")
+					log.Println("Enroll success")
 				}
 				continue
 			}
 
 			for !a.DKGSuccess {
-				log.Println("waiting DKG")
+
 			}
 
 			if err := a.HandleValidationRequest(ctx, event); err != nil {
-				log.Errorf("Handle ValidationRequest log: %v", err)
+				log.Println("Handle ValidationRequest log: %v", err)
 			}
 		case err = <-sub.Err():
 			return err
@@ -137,7 +138,7 @@ func (a *Aggregator) WatchAndHandleDKGLog(ctx context.Context) error {
 		select {
 		case event := <-sink:
 			a.DKGSuccess = true
-			log.Println(event)
+			log.Println(event.PubKey)
 		case err = <-sub.Err():
 			return err
 		case <-ctx.Done():
@@ -148,8 +149,8 @@ func (a *Aggregator) WatchAndHandleDKGLog(ctx context.Context) error {
 
 func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleContractValidationRequest) error {
 
-	result, MulSig, MulR, _hash, err := a.AggregateValidationResults(ctx, event.Hash) // schnorr
-	// result, MulSig, _hash, MulY, nodes, pkSet, err := a.AggregateValidationResults(ctx, event.Hash, typ)
+	// result, MulSig, MulR, _hash, YBig, err := a.AggregateValidationResults(ctx, event.Hash) // schnorr
+	result, MulSig, MulR, _hash, message, err := a.AggregateValidationResults(ctx, event.Hash) // schnorr
 
 	if err != nil {
 		return fmt.Errorf("aggregate validation results: %w", err)
@@ -183,7 +184,7 @@ func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleC
 		return fmt.Errorf("hash tranform to big int: %w", err)
 	}
 
-	_, err = a.oracleContract.OracleContract.Submit(auth, result, event.Hash, sig, R[0], R[1], hash)
+	_, err = a.oracleContract.OracleContract.Submit(auth, result, event.Hash, message, sig, R[0], R[1], hash)
 
 	if err != nil {
 		return fmt.Errorf("submit verification: %w", err)
@@ -193,12 +194,12 @@ func (a *Aggregator) HandleValidationRequest(ctx context.Context, event *OracleC
 	if !result {
 		resultStr = "invalid"
 	}
-	log.Infof("Submitted validation result (%s) for hash %s of type %s", resultStr, common.Hash(event.Hash))
+	log.Println("Submitted validation result (%s) for hash %s of type %s", resultStr, common.Hash(event.Hash))
 
 	return nil
 }
 
-func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash common.Hash) (bool, kyber.Scalar, kyber.Point, kyber.Scalar, error) { // schnorr
+func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash common.Hash) (bool, kyber.Scalar, kyber.Point, kyber.Scalar, []byte, error) { // schnorr
 
 	Signatures := make([]kyber.Scalar, 0)
 	Rs := make([]kyber.Point, 0)
@@ -208,15 +209,15 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 	// 获取到了报名的节点数
 	enrollNodes, err := a.oracleContract.GetValidators(nil)
 	if err != nil {
-		log.Error("get enrollNodes %w", err)
+		log.Println("get enrollNodes %w", err)
 	}
-	var m []byte
+	var message []byte
 	for _, enrollNode := range enrollNodes {
 
 		node, _ := a.oracleContract.Registry.GetNodeByAddress(nil, enrollNode)
 		conn, err := grpc.Dial(node.IpAddr, grpc.WithInsecure())
 		if err != nil {
-			log.Errorf("Find connection by address: %v", err)
+			log.Println("Find connection by address: %v", err)
 			continue
 		}
 
@@ -233,13 +234,13 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 
 			cancel()
 			if err != nil {
-				log.Errorf("Validate %s: %v", err)
+				log.Println("Validate err : %v", err)
 				return
 			}
 
 			mutex.Lock()
 			if result.Valid {
-				m = result.Message
+				message = result.Message
 				z := a.suite.G1().Scalar().SetBytes(result.Signature)
 				R := a.suite.G1().Point().Null()
 				R.UnmarshalBinary(result.R)
@@ -260,14 +261,14 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 
 	YBig, err := a.oracleContract.DKG.GetPubKey(nil)
 	if err != nil {
-		log.Errorf("get Y err : %w", err)
+		log.Println("get Y err : %w", err)
 	}
 
 	RByte, err := R.MarshalBinary()
 	if err != nil {
-		log.Errorf("marshal R error : %w", err)
+		log.Println("marshal R error : %w", err)
 	}
-
+	m := message
 	m = append(m, RByte...)
 	m = append(m, YBig[0].Bytes()...)
 	m = append(m, YBig[1].Bytes()...)
@@ -275,6 +276,6 @@ func (a *Aggregator) AggregateValidationResults(ctx context.Context, txHash comm
 	hash := sha256.New()
 	hash.Write(m)
 	c := a.suite.G1().Scalar().SetBytes(hash.Sum(nil))
-	return true, MulSig, R, c, nil
+	return true, MulSig, R, c, message, nil
 
 }

@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/crypto"
 	"go.dedis.ch/kyber/v3"
-	"math/big"
+	"go.dedis.ch/kyber/v3/pairing"
 )
 
 func AddressFromPrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
@@ -49,7 +51,6 @@ func G1PointToBig(point kyber.Point) ([2]*big.Int, error) {
 	}, nil
 }
 
-// 
 func G2PointToBig(point kyber.Point) ([4]*big.Int, error) {
 	b, err := point.MarshalBinary()
 	if err != nil {
@@ -77,4 +78,12 @@ func ScalarToBig(scalar kyber.Scalar) (*big.Int, error) {
 		return nil, fmt.Errorf("invalid signature length")
 	}
 	return new(big.Int).SetBytes(bytes), nil
+}
+
+func verifySchnorr(suite pairing.Suite, mulSig kyber.Scalar, R kyber.Point, hash kyber.Scalar, Y kyber.Point) bool {
+	left := suite.G1().Point().Mul(mulSig, nil)
+
+	right := suite.G1().Point().Add(R, suite.G1().Point().Mul(hash, Y))
+
+	return left.Equal(right)
 }

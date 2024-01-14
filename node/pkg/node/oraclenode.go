@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/segmentio/kafka-go"
-	log "github.com/sirupsen/logrus"
+	"log" 
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing"
 	"google.golang.org/grpc"
@@ -171,19 +171,19 @@ func (n *OracleNode) Run() error {
 
 	go func() {
 		if err := n.validator.ListenAndProcess(n); err != nil {
-			log.Errorf("Watch and handle DKG log: %v", err)
+			log.Println("Watch and handle DKG log: %v", err)
 		}
 	}()
 
 	go func() {
 		if err := n.aggregator.WatchAndHandleValidationRequestsLog(context.Background(), n); err != nil {
-			log.Errorf("Watch and handle ValidationRequest log: %v", err)
+			log.Println("Watch and handle ValidationRequest log: %v", err)
 		}
 	}()
 
 	go func() {
 		if err := n.aggregator.WatchAndHandleDKGLog(context.Background()); err != nil {
-			log.Errorf("Watch and handle ValidationRequest log: %v", err)
+			log.Println("Watch and handle ValidationRequest log: %v", err)
 		}
 	}()
 
@@ -204,11 +204,11 @@ func (n *OracleNode) register(ipAddr string) error {
 	auth.Value = minStack
 
 	publicKey := n.suite.G1().Point().Mul(n.PrivateKey, nil)
-	privatekeyBigint, err := G1PointToBig(publicKey)
+	publickeyBigint, err := G1PointToBig(publicKey)
 	if err != nil {
 		return fmt.Errorf("scalarToBig err : %w", err)
 	}
-	_, err = n.oracleContract.Register(auth, ipAddr, privatekeyBigint)
+	_, err = n.oracleContract.Register(auth, ipAddr, publickeyBigint)
 	if err != nil {
 		return fmt.Errorf("register iop node: %w", err)
 	}

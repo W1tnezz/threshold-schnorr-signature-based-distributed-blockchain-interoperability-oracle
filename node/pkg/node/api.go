@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
-	log "github.com/sirupsen/logrus"
+	"log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -60,7 +60,7 @@ func (n *OracleNode) Validate(ctx context.Context, request *ValidateRequest) (*V
 	if !result.valid {
 		resultStr = "invalid"
 	}
-	log.Infof("Validated hash %s  with result: %s", common.BytesToHash(request.Hash), resultStr)
+	log.Println("Validated hash %s  with result: %s", common.BytesToHash(request.Hash), resultStr)
 
 	return ValidateResultToResponse(result), nil
 }
@@ -71,6 +71,7 @@ func ValidateResultToResponse(result *ValidateResult) *ValidateResponse {
 		Valid:     result.valid,
 		Signature: result.signature,
 		R:         result.R,
+		Message:   result.message,
 	}
 
 	if result.blockNumber != nil {
