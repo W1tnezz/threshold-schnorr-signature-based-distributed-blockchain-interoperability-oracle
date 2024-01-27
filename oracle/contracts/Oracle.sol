@@ -33,7 +33,7 @@ contract Oracle {
         require(
             msg.value >=
                 BASE_FEE *
-                    ((registry.countOracleNodes() - 1) / 2 + 1) +
+                    ((registry.countOracleNodes() - 1)) +
                     AGGREGATE_FEE,
             "too few"
         );
@@ -43,7 +43,7 @@ contract Oracle {
     function totalFee() public view returns (uint256) {
         return
             BASE_FEE *
-            ((registry.countOracleNodes() - 1) / 2 + 1) +
+            ((registry.countOracleNodes() - 1)) +
             AGGREGATE_FEE;
     }
 

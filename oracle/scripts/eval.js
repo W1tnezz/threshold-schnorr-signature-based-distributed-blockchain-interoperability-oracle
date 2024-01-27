@@ -6,7 +6,7 @@ module.exports = async function () {
   let oracle = await Oracle.deployed();
   let fee = await oracle.totalFee();
 
-  let message = "0xd693c74460d7f75b302c50eb6bc9c8463476af92419d8e7c9b14994c8993a91b";
+  let message = "0x73c31a7abba3368ef85c0c519f658edea5d8494c4e3fc6c61d023c0671d75cc7";
   await oracle.validateTransaction(message, {
     value: fee,
   });
